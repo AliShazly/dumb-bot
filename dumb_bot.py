@@ -235,24 +235,22 @@ async def _8ball(ctx, message):
 async def snap(ctx, role: discord.Role = None):
     members = []
     for member in ctx.message.server.members:
-        if role in member.roles:
+        if role in member.roles and str(member.status) != 'offline':
             members.append(member.name)
-        elif role == None:
+        elif role == None and str(member.status) != 'offline':
             members.append(member.name)
     random.shuffle(members)
     snap_num = 0
-    snapped = []
+    snapped = [' '] # Empty value so the last member in the list gets included in the message
     for i in members:
         if snap_num % 2 == 0:
-            snapped.append(i)
+            snapped.insert(0, i) # Inserting at the beginning so the empty string stays at the end
         snap_num += 1
     embed_snapped = discord.Embed(
         title=':ok_hand:**Snapped**:ok_hand: ',
-        colour=discord.Colour.purple()
+        colour=discord.Colour.purple(),
+        description = ' was snapped!\n'.join(snapped)
     )
-    for i in range(0, len(snapped)):
-        embed_snapped.add_field(
-            name='\u200b', value=f'{snapped[i]} was snapped!', inline=False)
     msg = await client.say(embed=embed_snapped)
     await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
 
@@ -422,6 +420,7 @@ async def help(ctx, *, message='all'):
 
 
 # Make snap work with role names
+# Make snap not snap bots
 # Honk counter per day
 # !Google command
 # Make layers in the help command that you can cycle through with reactions
