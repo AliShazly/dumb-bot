@@ -347,7 +347,8 @@ async def kevin(ctx, member: discord.Member, seconds=20):
         t_end = time.time() + seconds
         while time.time() < t_end:
             await client.move_member(member, destination)
-            await asyncio.sleep(1)
+            await asyncio.sleep(.8)
+        await client.move_member(member, initial_channel)
         return
     roles = []
     for role in member.roles:
@@ -357,10 +358,10 @@ async def kevin(ctx, member: discord.Member, seconds=20):
     t_end = time.time() + seconds
     while time.time() < t_end:
         await client.move_member(member, destination)
-        await asyncio.sleep(1)
+        await asyncio.sleep(.8)
     for role in roles:
         await client.add_roles(member, role)
-        await asyncio.sleep(.6)
+        await asyncio.sleep(.8)
     await client.remove_roles(member, kevin)
     await client.move_member(member, initial_channel)
 
@@ -421,7 +422,6 @@ async def help(ctx, *, message='all'):
 
 
 # Make snap work with role names
-# Make the kevin command move them back into the origninal channel when kevin is done
 # Honk counter per day
 # !Google command
 # Make layers in the help command that you can cycle through with reactions
