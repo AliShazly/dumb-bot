@@ -7,20 +7,36 @@ import time
 from itertools import cycle
 import logging
 
+# Server invite link - https://discordapp.com/oauth2/authorize?client_id=501250712232132623&scope=bot&permissions=2146958801
+# Github repository - https://github.com/AliShazly/dumb-bot
+
 logger = logging.getLogger('discord')
-logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.setLevel(logging.DEBUG)  # Change to INFO for less entries
+handler = logging.FileHandler(
+    filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter(
+    '%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
+token = open('token.txt', 'r').read()
 client = commands.Bot(command_prefix='?')
 prefix = '?'
 client.remove_command('help')
-token = open('token.txt', 'r').read()
 server = '463945558348922892'
-invite = 'https://discordapp.com/oauth2/authorize?client_id=501250712232132623&scope=bot&permissions=2146958801'
 honk_num = 0
 kevin_honk = 0
+
+# Quicker setup for the reaction response feature
+async def reaction_response(message, author, emojis, messages_to_delete=None, timeout=None):
+    for i in emojis:
+        await client.add_reaction(message, i)
+    reaction = await client.wait_for_reaction(emoji=emojis, message=message, user=author, timeout=timeout)
+    if reaction.reaction.emoji == emojis[0]:
+        if messages_to_delete != None:
+            for i in messages_to_delete:
+                await client.delete_message(i)
+        return True
+    return False
 
 @client.event  # Error handler
 async def on_command_error(error, ctx):
@@ -55,10 +71,7 @@ async def on_command_error(error, ctx):
         )
     embed.set_footer(text=f'{prefix}help [command] for more info')
     error_msg = await client.send_message(ctx.message.channel, embed=embed)
-    await client.add_reaction(error_msg,'❌')
-    reaction = await client.wait_for_reaction(emoji=['❌'], message=error_msg, user=ctx.message.author)
-    if reaction.reaction.emoji == '❌':
-        await client.delete_message(error_msg)
+    await reaction_response(error_msg, ctx.message.author, ['❌'], [error_msg])
     print(type(error))
     print(error)
 
@@ -92,8 +105,8 @@ async def on_member_join(member):
     await client.add_roles(member, role)
 
 
-@client.command()  # Checks the pingtime of the bot
-async def ping():
+@client.command(pass_context=True)  # Checks the pingtime of the bot
+async def ping(ctx):
     pingtime = time.time()
     pingms = await client.say("*Pinging...*")
     ping = (time.time() - pingtime) * 1000
@@ -104,11 +117,12 @@ async def ping():
     )
     print(f"Pinged bot with a response time of {ping}ms.")
     await client.delete_message(pingms)
-    await client.say(embed=embed)
+    msg = await client.say(embed=embed)
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
 
 
-@client.command()  # Echoes whatever the user attatches to the command
-async def echo(*message):
+@client.command(pass_context = True)  # Echoes whatever the user attatches to the command
+async def echo(ctx, *message):
     output = ''
     for word in message:
         output += f'{word} '
@@ -116,7 +130,8 @@ async def echo(*message):
         description=f'{output}',
         colour=discord.Colour.orange()
     )
-    await client.say(embed=embed)
+    msg = await client.say(embed=embed)
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
 
 
 @client.command(pass_context=True)  # Flips a coin
@@ -126,11 +141,11 @@ async def flip(ctx):
         description=f'{ctx.message.author.nick} flipped a coin and got **{coinflip}**!',
         colour=discord.Color.orange()
     )
-    await client.say(embed=embed)
+    msg = await client.say(embed=embed)
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
 
-
-@client.command() # Returns honk stats
-async def honk():
+@client.command(pass_context = True)  # Returns honk stats
+async def honk(ctx):
     embed = discord.Embed(
         title='<:honk:483485000713502740> Honks',
         description=f'''There have been {honk_num} honks since the bot was last started
@@ -138,7 +153,8 @@ async def honk():
         Kevin has contributed {round((kevin_honk/honk_num), 3)*100}% of the total honks''',
         colour=discord.Colour.orange()
     )
-    await client.say(embed=embed)
+    msg = await client.say(embed=embed)
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
 
 
 @client.command(pass_context=True)  # Deletes a specified amount of messages
@@ -159,16 +175,18 @@ async def clear(ctx, amount):
     await client.delete_message(messages_deleted)
 
 
-@client.command()  # Spams whatever is given in the argument
-@commands.has_permissions(manage_messages=True)
-async def spam(*args):
+@client.command(pass_context = True)  # Spams whatever is given in the argument
+# @commands.has_permissions(manage_messages=True)
+async def spam(ctx, *args):
     output = ''
+    msg_delete = []
     for word in args:
         output += word + ' '
     for _ in range(0, 5):
-        await client.say(output)
+        delete = await client.say(output)
+        msg_delete.append(delete)
         await asyncio.sleep(.1)
-
+    await reaction_response(delete, ctx.message.author, ['❌'], messages_to_delete=([ctx.message] + msg_delete))
 
 # Picks a random number or a random element from a list
 @client.command(pass_context=True)
@@ -181,7 +199,7 @@ async def roll(ctx, *amount):
             description=f'I picked **{list_choice}** from the list!',
             colour=discord.Colour.orange()
         )
-        await client.say(embed=embed)
+        msg = await client.say(embed=embed)
     else:
         amount = int(amount)
         if amount <= 1:
@@ -189,15 +207,15 @@ async def roll(ctx, *amount):
                 description='Please pick a number greater than 1',
                 colour=discord.Colour.orange()
             )
-            await client.say(embed=embed)
+            msg = await client.say(embed=embed)
         else:
             random_num = random.randint(1, amount)
             embed = discord.Embed(
                 description=f'**{ctx.message.author.nick}** rolled a {random_num}!',
                 colour=discord.Color.orange()
             )
-            await client.say(embed=embed)
-
+            msg = await client.say(embed=embed)
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
 
 @client.command(name='8ball', pass_context=True)  # 8ball
 async def _8ball(ctx, message):
@@ -209,38 +227,18 @@ async def _8ball(ctx, message):
         colour=discord.Colour.orange(),
         description=f'Q: {message.capitalize()} \nA: {responses[random_num]}',
     )
-    await client.say(embed=embed)
-
+    msg = await client.say(embed=embed)
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
 
 # Snaps half the people in a sepcific role, defaults to @everyone
 @client.command(pass_context=True)
 async def snap(ctx, role: discord.Role = None):
-    mention = True
-    if role == None or role.is_everyone == True:
-        embed = discord.Embed(
-            title=':warning: Warning :warning:',
-            description='You are about to tag a lot of people. Should I disable mentions?',
-            colour=discord.Colour.orange()
-        )
-        msg = await client.say(embed=embed)
-        await client.add_reaction(msg, '✅')
-        await client.add_reaction(msg, '❌')
-        reaction = await client.wait_for_reaction(emoji=['✅', '❌'], message=msg, user=ctx.message.author)
-        if reaction.reaction.emoji == '✅':
-            mention = False
     members = []
-    if mention == True:
-        for member in ctx.message.server.members:
-            if role in member.roles:
-                members.append(member.id)
-            elif role == None:
-                members.append(member.id)
-    else:
-        for member in ctx.message.server.members:
-            if role in member.roles:
-                members.append(member.name)
-            elif role == None:
-                members.append(member.name)
+    for member in ctx.message.server.members:
+        if role in member.roles:
+            members.append(member.name)
+        elif role == None:
+            members.append(member.name)
     random.shuffle(members)
     snap_num = 0
     snapped = []
@@ -253,14 +251,10 @@ async def snap(ctx, role: discord.Role = None):
         colour=discord.Colour.purple()
     )
     for i in range(0, len(snapped)):
-        if mention == True:
-            embed_snapped.add_field(
-                name='\u200b', value=f'<@{snapped[i]}> was snapped!', inline=False)
-        else:
-            embed_snapped.add_field(
-                name='\u200b', value=f'{snapped[i]} was snapped!', inline=False)
-    await client.say(embed=embed_snapped)
-
+        embed_snapped.add_field(
+            name='\u200b', value=f'{snapped[i]} was snapped!', inline=False)
+    msg = await client.say(embed=embed_snapped)
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
 
 @client.command(pass_context=True)  # owoifies text
 async def owo(ctx, *message):
@@ -333,41 +327,39 @@ async def poll(ctx, message):
 # @commands.has_permissions(manage_messages=True)
 async def kevin(ctx, member: discord.Member, seconds=20):
     destination = '503452748017303553'
-    producer = discord.utils.get(member.server.roles, name= 'Producer')
+    producer = discord.utils.get(member.server.roles, name='Producer')
     if seconds > 20:
         raise IndexError
-
     elif member.id == '197156566288302080':
         embed = discord.Embed(
             title='F̨̛A̷̸̷̧̢T҉҉A͞L̸̕͜ ̨̡E̶͢͟R̢͡R̡͘O̴̡͘R̴̨͘',
             description='͏̷I̴҉̨ ̴̨a̴̢͢͝m̶̕ ̸̨̛͟u̶̢ǹ҉̡ą̨̀͡͝b̵̀́l̡e̷̛͡ ̛̕͏t̷̀̕o̧͢ ̸̛̕c̨̛̕͞o̴͠҉͟m̸̢̀p̷͢l͏̶è̸̸̵̴t̶͢e̴̡͜͠ ̶̧̕͘ý͘͝ớ̵̛u̵̵͢͞͠ŗ̸̛͢͟ ̢̕҉̡r̸̷e̕͞q̶̵̕͝͡ư͟͡ę̵͟s̴̨͟t͠҉.̷̸͟',
             colour=discord.Colour.red()
         )
-        doit = await client.say(embed=embed)
-        emoji = get(client.get_all_emojis(), name='doit')
-        await client.add_reaction(doit, emoji)
-        reaction = await client.wait_for_reaction(user=ctx.message.author, timeout=30)
-        if reaction == None:
+        msg = await client.say(embed=embed)
+        doit = get(client.get_all_emojis(), name='doit')
+        check = await reaction_response(msg, ctx.message.author, [doit], timeout=30)
+        if check == False:
             return
     elif producer in member.roles:
         t_end = time.time() + seconds
         while time.time() < t_end:
             await client.move_member(member, client.get_channel(destination))
             await asyncio.sleep(1)
-    else:
-        roles = []
-        for role in member.roles:
-            roles.append(role)
-        kevin = discord.utils.get(member.server.roles, name='kevin')
-        await client.replace_roles(member, kevin)
-        t_end = time.time() + seconds
-        while time.time() < t_end:
-            await client.move_member(member, client.get_channel(destination))
-            await asyncio.sleep(1)
-        for role in roles:
-            await client.add_roles(member, role)
-            await asyncio.sleep(.6)
-        await client.remove_roles(member, kevin)
+        return
+    roles = []
+    for role in member.roles:
+        roles.append(role)
+    kevin = discord.utils.get(member.server.roles, name='kevin')
+    await client.replace_roles(member, kevin)
+    t_end = time.time() + seconds
+    while time.time() < t_end:
+        await client.move_member(member, client.get_channel(destination))
+        await asyncio.sleep(1)
+    for role in roles:
+        await client.add_roles(member, role)
+        await asyncio.sleep(.6)
+    await client.remove_roles(member, kevin)
 
 
 @client.command(pass_context=True)  # Help window
@@ -418,14 +410,17 @@ async def help(ctx, *, message='all'):
     if 'kevin' in message or message == 'all':
         embed.add_field(
             name=f'{prefix}kevin [user] [time]', value='Exiles [user] for [time] seconds. Default = 20secs', inline=False)
-    help_message = await client.say(embed=embed)
-    await client.add_reaction(help_message, '❌')
-    reaction = await client.wait_for_reaction(emoji=['❌'], message=help_message, user=ctx.message.author)
-    if reaction.reaction.emoji == '❌':
-        await client.delete_message(help_message)
-        await client.delete_message(ctx.message)
+    if message == 'x' or message == 'all':
+        embed.add_field(
+            name=f'Red ❌', value='Click the red ❌ underneath a bot message to delete it and the command that summoned it. Can only be done by summoner.', inline=False)
+    msg = await client.say(embed=embed)
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
+    
 
-# Turn the reaction response thing into a func
+
+# Make snap work with role names
+# Make the kevin command move them back into the origninal channel when kevin is done
+# Refactor code to Devam's standards
 # Make producers kevinable by not changing their roles - I think this works, not tested
 # Honk counter per day
 # !Google command
