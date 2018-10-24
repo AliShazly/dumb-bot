@@ -85,11 +85,11 @@ async def on_ready():
 
 @client.event  # Prints messages to the console and collects honk data
 async def on_message(message):
-    kevin = 135213084527689728
+    kevin_id = 135213084527689728
     print(f'{message.author}: {message.channel}: {message.content}')
     if message.content == 'gif':
         await client.send_message(message.channel, 'fuck jeremy')
-    if ':honk:' in message.content and message.author.id == str(kevin):
+    if ':honk:' in message.content and message.author.id == str(kevin_id):
         global kevin_honk
         kevin_honk += 1
     if ':honk:' in message.content or ':BadHonk:' in message.content:
@@ -326,11 +326,13 @@ async def poll(ctx, message):
 @client.command(pass_context=True)
 # @commands.has_permissions(manage_messages=True)
 async def kevin(ctx, member: discord.Member, seconds=20):
-    destination = '503452748017303553'
+    destination = client.get_channel('503452748017303553')
+    initial_channel = member.voice_channel
+    ali_id = 197156566288302080
     producer = discord.utils.get(member.server.roles, name='Producer')
     if seconds > 20:
         raise IndexError
-    elif member.id == '197156566288302080':
+    elif member.id == str(ali_id):
         embed = discord.Embed(
             title='F̨̛A̷̸̷̧̢T҉҉A͞L̸̕͜ ̨̡E̶͢͟R̢͡R̡͘O̴̡͘R̴̨͘',
             description='͏̷I̴҉̨ ̴̨a̴̢͢͝m̶̕ ̸̨̛͟u̶̢ǹ҉̡ą̨̀͡͝b̵̀́l̡e̷̛͡ ̛̕͏t̷̀̕o̧͢ ̸̛̕c̨̛̕͞o̴͠҉͟m̸̢̀p̷͢l͏̶è̸̸̵̴t̶͢e̴̡͜͠ ̶̧̕͘ý͘͝ớ̵̛u̵̵͢͞͠ŗ̸̛͢͟ ̢̕҉̡r̸̷e̕͞q̶̵̕͝͡ư͟͡ę̵͟s̴̨͟t͠҉.̷̸͟',
@@ -344,7 +346,7 @@ async def kevin(ctx, member: discord.Member, seconds=20):
     elif producer in member.roles:
         t_end = time.time() + seconds
         while time.time() < t_end:
-            await client.move_member(member, client.get_channel(destination))
+            await client.move_member(member, destination)
             await asyncio.sleep(1)
         return
     roles = []
@@ -354,13 +356,13 @@ async def kevin(ctx, member: discord.Member, seconds=20):
     await client.replace_roles(member, kevin)
     t_end = time.time() + seconds
     while time.time() < t_end:
-        await client.move_member(member, client.get_channel(destination))
+        await client.move_member(member, destination)
         await asyncio.sleep(1)
     for role in roles:
         await client.add_roles(member, role)
         await asyncio.sleep(.6)
     await client.remove_roles(member, kevin)
-
+    await client.move_member(member, initial_channel)
 
 @client.command(pass_context=True)  # Help window
 async def help(ctx, *, message='all'):
@@ -420,8 +422,6 @@ async def help(ctx, *, message='all'):
 
 # Make snap work with role names
 # Make the kevin command move them back into the origninal channel when kevin is done
-# Refactor code to Devam's standards
-# Make producers kevinable by not changing their roles - I think this works, not tested
 # Honk counter per day
 # !Google command
 # Make layers in the help command that you can cycle through with reactions
