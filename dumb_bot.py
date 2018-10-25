@@ -20,8 +20,8 @@ handler.setFormatter(logging.Formatter(
     '%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
-# token = open('token.txt', 'r').read()
-token = os.environ['TOKEN']
+token = open('token.txt', 'r').read()
+# token = os.environ['TOKEN']
 client = commands.Bot(command_prefix='?')
 prefix = '?'
 client.remove_command('help')
@@ -331,6 +331,7 @@ async def kevin(ctx, member: discord.Member, seconds=20):
     initial_channel = member.voice_channel
     ali_id = 197156566288302080
     producer = discord.utils.get(member.server.roles, name='Producer')
+    best_friend_role = discord.utils.get(member.server.roles, name='Best Friend role')
     if seconds > 20:
         raise IndexError
     elif member.id == str(ali_id):
@@ -344,7 +345,7 @@ async def kevin(ctx, member: discord.Member, seconds=20):
         check = await reaction_response(msg, ctx.message.author, [doit], timeout=30)
         if check == False:
             return
-    elif producer in member.roles:
+    elif producer in member.roles or best_friend_role in member.roles:
         t_end = time.time() + seconds
         while time.time() < t_end:
             await client.move_member(member, destination)
