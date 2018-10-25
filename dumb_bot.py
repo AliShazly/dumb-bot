@@ -20,8 +20,8 @@ handler.setFormatter(logging.Formatter(
     '%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
-token = open('token.txt', 'r').read()
-# token = os.environ['TOKEN']
+# token = open('token.txt', 'r').read()
+token = os.environ['TOKEN']
 client = commands.Bot(command_prefix='?')
 prefix = '?'
 client.remove_command('help')
