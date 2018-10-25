@@ -13,7 +13,7 @@ import os
 # Github repository - https://github.com/AliShazly/dumb-bot
 
 logger = logging.getLogger('discord')
-logger.setLevel(logging.DEBUG)  # Change to INFO for less entries
+logger.setLevel(logging.INFO)
 handler = logging.FileHandler(
     filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter(
@@ -121,7 +121,7 @@ async def ping(ctx):
     print(f"Pinged bot with a response time of {ping}ms.")
     await client.delete_message(pingms)
     msg = await client.say(embed=embed)
-    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
 
 @client.command(pass_context = True)  # Echoes whatever the user attatches to the command
@@ -134,7 +134,7 @@ async def echo(ctx, *message):
         colour=discord.Colour.orange()
     )
     msg = await client.say(embed=embed)
-    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
 
 @client.command(pass_context=True)  # Flips a coin
@@ -145,7 +145,7 @@ async def flip(ctx):
         colour=discord.Color.orange()
     )
     msg = await client.say(embed=embed)
-    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
 @client.command(pass_context = True)  # Returns honk stats
 async def honk(ctx):
@@ -157,7 +157,7 @@ async def honk(ctx):
         colour=discord.Colour.orange()
     )
     msg = await client.say(embed=embed)
-    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
 
 @client.command(pass_context=True)  # Deletes a specified amount of messages
@@ -189,7 +189,7 @@ async def spam(ctx, *args):
         delete = await client.say(output)
         msg_delete.append(delete)
         await asyncio.sleep(.1)
-    await reaction_response(delete, ctx.message.author, ['❌'], messages_to_delete=([ctx.message] + msg_delete))
+    await reaction_response(delete, ctx.message.author, ['❌'], messages_to_delete=(msg_delete))
 
 # Picks a random number or a random element from a list
 @client.command(pass_context=True)
@@ -218,7 +218,7 @@ async def roll(ctx, *amount):
                 colour=discord.Color.orange()
             )
             msg = await client.say(embed=embed)
-    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
 @client.command(name='8ball', pass_context=True)  # 8ball
 async def _8ball(ctx, message):
@@ -231,7 +231,7 @@ async def _8ball(ctx, message):
         description=f'Q: {message.capitalize()} \nA: {responses[random_num]}',
     )
     msg = await client.say(embed=embed)
-    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
 # Snaps half the people in a sepcific role, defaults to @everyone
 @client.command(pass_context=True)
@@ -255,7 +255,7 @@ async def snap(ctx, role: discord.Role = None):
         description = ' was snapped!\n'.join(snapped)
     )
     msg = await client.say(embed=embed_snapped)
-    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
 @client.command(pass_context=True)  # owoifies text
 async def owo(ctx, *message):
@@ -416,7 +416,7 @@ async def help(ctx, *, message='all'):
             name=f'{prefix}kevin [user] [time]', value='Exiles [user] for [time] seconds. Default = 20secs', inline=False)
     if message == 'x' or message == 'all':
         embed.add_field(
-            name=f'Red ❌', value='Click the red ❌ underneath a bot message to delete it and the command that summoned it. Can only be done by summoner.', inline=False)
+            name=f'Red X', value='Click the red X underneath a bot message to delete it. Can only be done by the user that called the bot.', inline=False)
     msg = await client.say(embed=embed)
     await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
     
