@@ -6,6 +6,8 @@ import asyncio
 import time
 from itertools import cycle
 import logging
+import os
+
 
 # Server invite link - https://discordapp.com/oauth2/authorize?client_id=501250712232132623&scope=bot&permissions=2146958801
 # Github repository - https://github.com/AliShazly/dumb-bot
@@ -18,7 +20,8 @@ handler.setFormatter(logging.Formatter(
     '%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
-token = open('token.txt', 'r').read()
+# token = open('token.txt', 'r').read()
+token = os.environ['TOKEN']
 client = commands.Bot(command_prefix='?')
 prefix = '?'
 client.remove_command('help')

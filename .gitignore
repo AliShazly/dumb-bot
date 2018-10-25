@@ -103,3 +103,4 @@ venv.bak/1
 # mypy
 .mypy_cache/
 token.txt
+responses.txt
