@@ -1,1 +1,2 @@
 discord.py==0.16.12
+pillow==1.1.7
