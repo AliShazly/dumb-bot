@@ -22,13 +22,16 @@ handler.setFormatter(logging.Formatter(
     '%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
+logger = logging.getLogger('commands')
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler('errors.log', 'w', 'utf-8')
+logger.addHandler(handler)
+
 # token = open('token.txt', 'r').read()
 token = os.environ['TOKEN']
-client = commands.Bot(command_prefix='?')
 prefix = '?'
+client = commands.Bot(command_prefix=f'{prefix}')
 client.remove_command('help')
-honk_num = 0
-kevin_honk = 0
 
 
 async def reaction_response(message, author, emojis, messages_to_delete=None, timeout=None):
@@ -91,16 +94,8 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    """Prints messages to the console and collects honk data"""
-    kevin_id = 135213084527689728
+    """Prints messages to the console"""
     print(f'{message.author}: {message.channel}: {message.content}: {message.attachments}: {message.embeds}')
-    # Temporary, probably a better way to do this
-    if ':honk:' in message.content and message.author.id == str(kevin_id):
-        global kevin_honk
-        kevin_honk += 1
-    if ':honk:' in message.content or ':BadHonk:' in message.content:
-        global honk_num
-        honk_num += 1
     await client.process_commands(message)
 
 
@@ -151,20 +146,6 @@ async def flip(ctx):
     embed = discord.Embed(
         description=f'{ctx.message.author.nick} flipped a coin and got **{coinflip}**!',
         colour=discord.Color.orange()
-    )
-    msg = await client.say(embed=embed)
-    await reaction_response(msg, ctx.message.author, ['❌'], [msg])
-
-
-@client.command(pass_context=True)
-async def honk(ctx):
-    """Returns honk stats"""
-    embed = discord.Embed(
-        title='<:honk:483485000713502740> Honks',
-        description=f'''There have been {honk_num} honks since the bot was last started
-        Kevin has honked {kevin_honk} times ~~ today ~~ *(doesn't work yet)* 
-        Kevin has contributed {round((kevin_honk/honk_num), 3)*100}% of the total honks''',
-        colour=discord.Colour.orange()
     )
     msg = await client.say(embed=embed)
     await reaction_response(msg, ctx.message.author, ['❌'], [msg])
@@ -339,8 +320,8 @@ async def poll(ctx, message):
         await client.add_reaction(poll, to_emoji(i))
 
 
-@client.command(pass_context=True)
-async def kevin(ctx, member: discord.Member, seconds=20):
+@client.command(pass_context=True, aliases=['kevin'])
+async def exile(ctx, member: discord.Member, seconds=20):
     """Exiles a user to a "you're wrong" channel, and gives them a temp role that has no perms. After the time is up they are returned to normal"""
     destination = client.get_channel('503452748017303553')
     initial_channel = member.voice_channel
@@ -361,7 +342,7 @@ async def kevin(ctx, member: discord.Member, seconds=20):
         check = await reaction_response(msg, ctx.message.author, [doit], timeout=30)
         if check == False:
             return
-    # If the user is an admin then, the bot doesn't have perms to change thier role. 
+    # If the user is an admin then, the bot doesn't have perms to change thier role.
     elif ctx.message.author.server_permissions.administrator:
         t_end = time.time() + seconds
         while time.time() < t_end:
@@ -386,7 +367,7 @@ async def kevin(ctx, member: discord.Member, seconds=20):
 
 
 @client.command(pass_context=True)
-async def deepfry(ctx, image_url=None):
+async def deepfry(ctx, quality=None, image_url=None):
     """Deep fries an image"""
     channel = ctx.message.channel
     # If no link is provided, the bot assigns the URL of the last image sent in the channel to the image_link var
@@ -396,27 +377,44 @@ async def deepfry(ctx, image_url=None):
                 attachments_dict = message.attachments[0]
                 image_url = attachments_dict['url']
                 break
+
     # Need to use requests to read the image otherwise it returns a 403:FORBIDDEN error
     response = requests.get(image_url)
-    img = Image.open(BytesIO(response.content)) # Reading the raw image data
-    img = img.convert('RGB')
-    contrast = ImageEnhance.Contrast(img)
-    img = contrast.enhance(1.5)
+    img = Image.open(BytesIO(response.content))  # Reading the raw image data
+    img = img.convert('RGB')  # Converting RGBA into RGB
+
+    # Resizes and resamples the image multiple times, then crushes the histogram
+    if quality == 'crush':
+        width, height = img.width, img.height
+        img = img.resize((int(width ** .75), int(height ** .75)),
+                         resample=Image.LANCZOS)
+        img = img.resize((int(width ** .88), int(height ** .88)),
+                         resample=Image.BILINEAR)
+        img = img.resize((int(width ** .9), int(height ** .9)),
+                         resample=Image.BICUBIC)
+        img = img.resize((width, height), resample=Image.BICUBIC)
+        img = ImageOps.posterize(img, 5)
+
+    # Deep fries the image
+    sharpness = ImageEnhance.Sharpness(img)
+    img = sharpness.enhance(70)  # Sharpness
+    brightnesss = ImageEnhance.Brightness(img)
+    img = brightnesss.enhance(2)  # Brightness
     saturation = ImageEnhance.Color(img)
-    img = saturation.enhance(1.7)
-    for _ in range(3):
-        img = img.filter(ImageFilter.EDGE_ENHANCE)
+    img = saturation.enhance(2)  # Saturation
+    contrast = ImageEnhance.Contrast(img)
+    img = contrast.enhance(3)  # Contrast
     img = img.filter(ImageFilter.SMOOTH_MORE)
-    img = img.point(lambda i: i * 1.4) # Brightens image
     img = ImageOps.equalize(img)
-    img.save(fp=f'fried.jpg', format='JPEG', quality=6)
+
+    img.save(fp=f'fried.jpg', format='JPEG', quality=8)
     await client.send_file(channel, 'fried.jpg')
     os.remove('fried.jpg')
 
 
 @client.command(pass_context=True)
 async def jpeg(ctx, quality=2, image_url=None):
-    """Applies a JPEG filter to an image"""
+    """Applies a JPEG filter to an image, same ideas as deepfry"""
     channel = ctx.message.channel
     if image_url == None:
         async for message in client.logs_from(channel, limit=30):
@@ -437,7 +435,7 @@ async def help(ctx, *, message='all'):
     """Help window"""
     embed = discord.Embed(
         title='__Dumb Bot Help__',
-        description='This bot is really stupid, but it works sometimes.',
+        description=f'This bot is really stupid, but it works sometimes.\n{prefix}help [command] to get help with a specific command',
         colour=discord.Colour.orange(),
     )
     embed.set_footer(text='Dumb Bot by Ali El-Shazly')
@@ -450,7 +448,7 @@ async def help(ctx, *, message='all'):
             name=f'{prefix}echo [message]', value='Returns [message] as an embed', inline=False)
     if 'clear' in message or message == 'all':
         embed.add_field(
-            name=f'{prefix}clear [amount]', value='**__Admin command__** Clears [amount] messages from the chat', inline=False)
+            name=f'{prefix}clear [amount]', value='Clears [amount] messages from the chat', inline=False)
     if 'spam' in message or message == 'all':
         embed.add_field(
             name=f'{prefix}spam [message]', value='Returns [message] 5 times', inline=False)
@@ -475,37 +473,29 @@ async def help(ctx, *, message='all'):
     if 'clap' in message or message == 'all':
         embed.add_field(
             name=f'{prefix}clap [message]', value='Clapifies [message]', inline=False)
-    if 'owo' in message or message == 'all':
+    if 'poll' in message or message == 'all':
         embed.add_field(
-            name=f'{prefix}poll [message]', value='Creates a poll with [message] as the title', inline=False)
-    if 'kevin' in message or message == 'all':
+            name=f'{prefix}poll [message]', value='Creates a poll with [message] as the title. Poll paramaters are collected in the next message sent by the user', inline=False)
+    if 'exile' in message or message == 'all':
         embed.add_field(
-            name=f'{prefix}kevin [user] [time]', value='Exiles [user] for [time] seconds. Default = 20secs', inline=False)
+            name=f'{prefix}exile [user] [time]', value='Exiles [user] for [time] seconds. Default = 20secs', inline=False)
+    if 'deepfry' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}deepfry [quality] [image_url]', value='Deep fries [image_url]. If [image_url] is not provided, deep fries the last image sent in the channel', inline=False)
     if 'jpeg' in message or message == 'all':
         embed.add_field(
             name=f'{prefix}jpeg [quality] [image_url]', value='Applies a JPEG filter to [image_url] with a quality setting of [quality]', inline=False)
-    if 'deepfry' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}deepfry [image_url]', value='Deep fries [image_url]. If [image_url] is not provided, deep fries the last image sent in the channel', inline=False)
-    if message == 'x' or message == 'all':
-        embed.add_field(
-            name=f'Red X', value='Click the red X underneath a bot message to delete it. Can only be done by the user that called the bot.', inline=False)
     msg = await client.say(embed=embed)
     await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
 
 
-#        TODO:
-# Change prefix command
+#        TODO:\
 # Un-delete command
 # Nya command
 # Osu stats
-# Gif to gifv
 # Make snap work with role names
 # Make snap not snap bots
-# Honk counter per day
 # !Google command
 # Make layers in the help command that you can cycle through with reactions
-# Make user stats command
-# Make !hug and !amicool and other novelty commands
 # Make clear clear messages that were sent a couple secconds ago
 client.run(token)
