@@ -7,13 +7,15 @@ import time
 from itertools import cycle
 import logging
 import os
-
+from PIL import Image, ImageOps, ImageEnhance, ImageFilter
+import requests
+from io import BytesIO
 
 # Server invite link - https://discordapp.com/oauth2/authorize?client_id=501250712232132623&scope=bot&permissions=2146958801
 # Github repository - https://github.com/AliShazly/dumb-bot
 
 logger = logging.getLogger('discord')
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 handler = logging.FileHandler(
     filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter(
@@ -25,12 +27,12 @@ token = os.environ['TOKEN']
 client = commands.Bot(command_prefix='?')
 prefix = '?'
 client.remove_command('help')
-server = '463945558348922892'
 honk_num = 0
 kevin_honk = 0
 
-# Quicker setup for the reaction response feature
+
 async def reaction_response(message, author, emojis, messages_to_delete=None, timeout=None):
+    """Quicker setup for the reaction response feature"""
     for i in emojis:
         await client.add_reaction(message, i)
     reaction = await client.wait_for_reaction(emoji=emojis, message=message, user=author, timeout=timeout)
@@ -40,6 +42,7 @@ async def reaction_response(message, author, emojis, messages_to_delete=None, ti
                 await client.delete_message(i)
         return True
     return False
+
 
 @client.event  # Error handler
 async def on_command_error(error, ctx):
@@ -54,8 +57,7 @@ async def on_command_error(error, ctx):
     elif isinstance(error, commands.CommandInvokeError):
         embed = discord.Embed(
             title='CommandInvoke Error',
-            description=f'''There was a problem executing the command. Check what you typed and try again.\n
-            `{str(error)[28:]}`''',
+            description=f'There was a problem executing the command. Check what you typed and try again.',
             colour=discord.Colour.red()
         )
     # MissingRequiredArgument - The user entered a command without an argument eg. "!8ball"
@@ -74,24 +76,25 @@ async def on_command_error(error, ctx):
         )
     embed.set_footer(text=f'{prefix}help [command] for more info')
     error_msg = await client.send_message(ctx.message.channel, embed=embed)
-    await reaction_response(error_msg, ctx.message.author, ['❌'], [error_msg])
     print(type(error))
     print(error)
+    await reaction_response(error_msg, ctx.message.author, ['❌'], [error_msg])
 
 
-@client.event  # Prints bot login and version
+@client.event
 async def on_ready():
+    """Prints bot login and version"""
     await client.change_presence(game=discord.Game(name='being bad at python'))
     print(f'We have logged in as {client.user}')
     print(f'Running on discord.py version {discord.__version__}')
 
 
-@client.event  # Prints messages to the console and collects honk data
+@client.event
 async def on_message(message):
+    """Prints messages to the console and collects honk data"""
     kevin_id = 135213084527689728
-    print(f'{message.author}: {message.channel}: {message.content}')
-    if message.content == 'gif':
-        await client.send_message(message.channel, 'fuck jeremy')
+    print(f'{message.author}: {message.channel}: {message.content}: {message.attachments}: {message.embeds}')
+    # Temporary, probably a better way to do this
     if ':honk:' in message.content and message.author.id == str(kevin_id):
         global kevin_honk
         kevin_honk += 1
@@ -101,15 +104,18 @@ async def on_message(message):
     await client.process_commands(message)
 
 
-@client.event  # Assigns premade role to new members
+@client.event
 async def on_member_join(member):
-    welcome_role = 'actors'
-    role = discord.utils.get(member.server.roles, name=welcome_role)
+    """Assigns premade role to new members"""
+    default_role = 'actors'
+    role = discord.utils.get(member.server.roles, name=default_role)
     await client.add_roles(member, role)
 
 
-@client.command(pass_context=True)  # Checks the pingtime of the bot
+@client.command(pass_context=True)
 async def ping(ctx):
+    """Checks the pingtime of the bot"""
+    # Not accurate at all, this entire command needs to be reworked
     pingtime = time.time()
     pingms = await client.say("*Pinging...*")
     ping = (time.time() - pingtime) * 1000
@@ -124,8 +130,9 @@ async def ping(ctx):
     await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
 
-@client.command(pass_context = True)  # Echoes whatever the user attatches to the command
+@client.command(pass_context=True)
 async def echo(ctx, *message):
+    """Echoes whatever the user attatches to the command"""
     output = ''
     for word in message:
         output += f'{word} '
@@ -137,8 +144,9 @@ async def echo(ctx, *message):
     await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
 
-@client.command(pass_context=True)  # Flips a coin
+@client.command(pass_context=True)
 async def flip(ctx):
+    """Flips a coin"""
     coinflip = random.choice(['heads', 'tails'])
     embed = discord.Embed(
         description=f'{ctx.message.author.nick} flipped a coin and got **{coinflip}**!',
@@ -147,8 +155,10 @@ async def flip(ctx):
     msg = await client.say(embed=embed)
     await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
-@client.command(pass_context = True)  # Returns honk stats
+
+@client.command(pass_context=True)
 async def honk(ctx):
+    """Returns honk stats"""
     embed = discord.Embed(
         title='<:honk:483485000713502740> Honks',
         description=f'''There have been {honk_num} honks since the bot was last started
@@ -160,10 +170,10 @@ async def honk(ctx):
     await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
 
-@client.command(pass_context=True)  # Deletes a specified amount of messages
+@client.command(pass_context=True)
 @commands.has_permissions(manage_messages=True)
 async def clear(ctx, amount):
-    amount = int(amount)
+    """Deletes a specified amount of messages"""
     channel = ctx.message.channel
     messages = []
     async for message in client.logs_from(channel, limit=int(amount) + 1):
@@ -178,23 +188,26 @@ async def clear(ctx, amount):
     await client.delete_message(messages_deleted)
 
 
-@client.command(pass_context = True)  # Spams whatever is given in the argument
+@client.command(pass_context=True)
 # @commands.has_permissions(manage_messages=True)
 async def spam(ctx, *args):
+    """Spams whatever is given in the argument"""
     output = ''
     msg_delete = []
     for word in args:
         output += word + ' '
     for _ in range(0, 5):
+        # Adds all spam messages to msg_delete and deletes them all when the user requests
         delete = await client.say(output)
         msg_delete.append(delete)
         await asyncio.sleep(.1)
     await reaction_response(delete, ctx.message.author, ['❌'], messages_to_delete=(msg_delete))
 
-# Picks a random number or a random element from a list
+
 @client.command(pass_context=True)
 async def roll(ctx, *amount):
-    amount = ' '.join(amount)
+    """Picks a random number or a random element from a list"""
+    amount = ' '.join(amount)  # Converting the amount into a string
     if ',' in amount:
         roll_list = amount.split(',')
         list_choice = random.choice(roll_list)
@@ -205,24 +218,19 @@ async def roll(ctx, *amount):
         msg = await client.say(embed=embed)
     else:
         amount = int(amount)
-        if amount <= 1:
-            embed = discord.Embed(
-                description='Please pick a number greater than 1',
-                colour=discord.Colour.orange()
-            )
-            msg = await client.say(embed=embed)
-        else:
-            random_num = random.randint(1, amount)
-            embed = discord.Embed(
-                description=f'**{ctx.message.author.nick}** rolled a {random_num}!',
-                colour=discord.Color.orange()
-            )
-            msg = await client.say(embed=embed)
+        random_num = random.randint(1, amount)
+        embed = discord.Embed(
+            description=f'**{ctx.message.author.nick}** rolled a {random_num}!',
+            colour=discord.Color.orange()
+        )
+        msg = await client.say(embed=embed)
     await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
-@client.command(name='8ball', pass_context=True)  # 8ball
+
+@client.command(name='8ball', pass_context=True)
 async def _8ball(ctx, message):
-    message = ctx.message.content[7:]
+    """Asks the magic 8ball a question"""
+    message = ctx.message.content[7:]  # Stripping the "!8ball" from the message
     random_num = random.randint(0, 19)
     responses = open('responses.txt').read().splitlines()
     embed = discord.Embed(
@@ -233,10 +241,12 @@ async def _8ball(ctx, message):
     msg = await client.say(embed=embed)
     await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
-# Snaps half the people in a sepcific role, defaults to @everyone
+
 @client.command(pass_context=True)
 async def snap(ctx, role: discord.Role = None):
+    """Snaps half the people in a sepcific role, defaults to @everyone"""
     members = []
+    # Stripping offline members from being snapped
     for member in ctx.message.server.members:
         if role in member.roles and str(member.status) != 'offline':
             members.append(member.name)
@@ -244,26 +254,30 @@ async def snap(ctx, role: discord.Role = None):
             members.append(member.name)
     random.shuffle(members)
     snap_num = 0
-    snapped = [' '] # Empty value so the last member in the list gets included in the message
+    # Ending with an empty value so the last member in the list gets included in the message
+    snapped = [' ']
     for i in members:
         if snap_num % 2 == 0:
-            snapped.insert(0, i) # Inserting at the beginning so the empty string stays at the end
+            # Inserting at the beginning so the empty string stays at the end
+            snapped.insert(0, i)
         snap_num += 1
     embed_snapped = discord.Embed(
         title=':ok_hand:**Snapped**:ok_hand: ',
         colour=discord.Colour.purple(),
-        description = ' was snapped!\n'.join(snapped)
+        description=' was snapped!\n'.join(snapped)
     )
     msg = await client.say(embed=embed_snapped)
     await reaction_response(msg, ctx.message.author, ['❌'], [msg])
 
-@client.command(pass_context=True)  # owoifies text
+
+@client.command(pass_context=True)
 async def owo(ctx, *message):
+    """Owoifies text"""
     output = ''
     for word in message:
         output += f'{word} '
     faces = ["(・`ω´・)", ";;w;;", "UwU", ">w<", "^w^", '(。O ω O。)']
-    # This is ugly af and you should be ashamed
+    # There has to be a better way to do this but this command is so stupid i dont care
     output = output.replace('l', 'w')
     output = output.replace('r', 'w')
     output = output.replace('na', 'nya')
@@ -280,12 +294,13 @@ async def owo(ctx, *message):
     await client.say(embed=embed)
 
 
-@client.command(pass_context=True)  # Clapifies a message
+@client.command(pass_context=True)
 async def clap(ctx, *message):
+    """Clapifies a message"""
     output = ''
     for word in message:
         output += f'{word} '
-    output = output.replace(' ', ':clap:')
+    output = output.replace(' ', ':clap:')  # Replacing every space with a clap
     embed = discord.Embed(
         title=f'{ctx.message.author.nick} says:',
         description=output,
@@ -294,8 +309,9 @@ async def clap(ctx, *message):
     await client.say(embed=embed)
 
 
-@client.command(pass_context=True)  # Creates a poll
+@client.command(pass_context=True)
 async def poll(ctx, message):
+    """Creates a poll"""
     def to_emoji(num):  # Turns a number from 1-26 into an emoji from a-z
         base = 0x1f1e6
         return chr(base + num)
@@ -323,16 +339,17 @@ async def poll(ctx, message):
         await client.add_reaction(poll, to_emoji(i))
 
 
-# Exiles a user to a "you're wrong" channel, and gives them a temp role that has no perms. After the time is up they are returned to normal
 @client.command(pass_context=True)
-# @commands.has_permissions(manage_messages=True)
 async def kevin(ctx, member: discord.Member, seconds=20):
+    """Exiles a user to a "you're wrong" channel, and gives them a temp role that has no perms. After the time is up they are returned to normal"""
     destination = client.get_channel('503452748017303553')
     initial_channel = member.voice_channel
     ali_id = 197156566288302080
-    producer = discord.utils.get(member.server.roles, name='Producer')
+    # producer = discord.utils.get(member.server.roles, name='Producer')
+    # best_friend_role = discord.utils.get(member.server.roles, name='Best Friend role')
     if seconds > 20:
-        raise IndexError
+        raise IndexError('Can not kevin someone for more than 20 seconds')
+    # Checking to see if ali is the one being kevined, invokes a special message
     elif member.id == str(ali_id):
         embed = discord.Embed(
             title='F̨̛A̷̸̷̧̢T҉҉A͞L̸̕͜ ̨̡E̶͢͟R̢͡R̡͘O̴̡͘R̴̨͘',
@@ -344,7 +361,8 @@ async def kevin(ctx, member: discord.Member, seconds=20):
         check = await reaction_response(msg, ctx.message.author, [doit], timeout=30)
         if check == False:
             return
-    elif producer in member.roles:
+    # If the user is an admin then, the bot doesn't have perms to change thier role. 
+    elif ctx.message.author.server_permissions.administrator:
         t_end = time.time() + seconds
         while time.time() < t_end:
             await client.move_member(member, destination)
@@ -366,8 +384,57 @@ async def kevin(ctx, member: discord.Member, seconds=20):
     await client.remove_roles(member, kevin)
     await client.move_member(member, initial_channel)
 
-@client.command(pass_context=True)  # Help window
+
+@client.command(pass_context=True)
+async def deepfry(ctx, image_url=None):
+    """Deep fries an image"""
+    channel = ctx.message.channel
+    # If no link is provided, the bot assigns the URL of the last image sent in the channel to the image_link var
+    if image_url == None:
+        async for message in client.logs_from(channel, limit=30):
+            if message.attachments != []:
+                attachments_dict = message.attachments[0]
+                image_url = attachments_dict['url']
+                break
+    # Need to use requests to read the image otherwise it returns a 403:FORBIDDEN error
+    response = requests.get(image_url)
+    img = Image.open(BytesIO(response.content)) # Reading the raw image data
+    img = img.convert('RGB')
+    contrast = ImageEnhance.Contrast(img)
+    img = contrast.enhance(1.5)
+    saturation = ImageEnhance.Color(img)
+    img = saturation.enhance(1.7)
+    for _ in range(3):
+        img = img.filter(ImageFilter.EDGE_ENHANCE)
+    img = img.filter(ImageFilter.SMOOTH_MORE)
+    img = img.point(lambda i: i * 1.4) # Brightens image
+    img = ImageOps.equalize(img)
+    img.save(fp=f'fried.jpg', format='JPEG', quality=6)
+    await client.send_file(channel, 'fried.jpg')
+    os.remove('fried.jpg')
+
+
+@client.command(pass_context=True)
+async def jpeg(ctx, quality=2, image_url=None):
+    """Applies a JPEG filter to an image"""
+    channel = ctx.message.channel
+    if image_url == None:
+        async for message in client.logs_from(channel, limit=30):
+            if message.attachments != []:
+                attachments_dict = message.attachments[0]
+                image_url = attachments_dict['url']
+                break
+    response = requests.get(image_url)
+    img = Image.open(BytesIO(response.content))
+    img = img.convert('RGB')
+    img.save(fp='jpegged.jpg', format='JPEG', quality=quality)
+    await client.send_file(channel, 'jpegged.jpg')
+    os.remove('jpegged.jpg')
+
+
+@client.command(pass_context=True)
 async def help(ctx, *, message='all'):
+    """Help window"""
     embed = discord.Embed(
         title='__Dumb Bot Help__',
         description='This bot is really stupid, but it works sometimes.',
@@ -386,7 +453,7 @@ async def help(ctx, *, message='all'):
             name=f'{prefix}clear [amount]', value='**__Admin command__** Clears [amount] messages from the chat', inline=False)
     if 'spam' in message or message == 'all':
         embed.add_field(
-            name=f'{prefix}spam [message]', value='**__Admin command__** Returns [message] 5 times', inline=False)
+            name=f'{prefix}spam [message]', value='Returns [message] 5 times', inline=False)
     if 'roll' in message or message == 'all':
         embed.add_field(
             name=f'{prefix}roll [value]', value=f'Returns a random number between 1 and [value]', inline=False)
@@ -414,14 +481,25 @@ async def help(ctx, *, message='all'):
     if 'kevin' in message or message == 'all':
         embed.add_field(
             name=f'{prefix}kevin [user] [time]', value='Exiles [user] for [time] seconds. Default = 20secs', inline=False)
+    if 'jpeg' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}jpeg [quality] [image_url]', value='Applies a JPEG filter to [image_url] with a quality setting of [quality]', inline=False)
+    if 'deepfry' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}deepfry [image_url]', value='Deep fries [image_url]. If [image_url] is not provided, deep fries the last image sent in the channel', inline=False)
     if message == 'x' or message == 'all':
         embed.add_field(
             name=f'Red X', value='Click the red X underneath a bot message to delete it. Can only be done by the user that called the bot.', inline=False)
     msg = await client.say(embed=embed)
     await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
-    
 
 
+#        TODO:
+# Change prefix command
+# Un-delete command
+# Nya command
+# Osu stats
+# Gif to gifv
 # Make snap work with role names
 # Make snap not snap bots
 # Honk counter per day
