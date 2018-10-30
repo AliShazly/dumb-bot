@@ -1,5 +1,4 @@
-# dumb-bot
-A small discord bot I am working on\
+## dumb-bot command list (probably outdated)
 `?ping` - Returns the response time of the bot\
 `?echo [message]` - Returns [message] as an embed\
 `?clear [amount]` - Clears [amount] messages from the chat\
