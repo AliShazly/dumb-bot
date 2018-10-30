@@ -199,20 +199,19 @@ async def clear(ctx, amount):
     await client.delete_message(messages_deleted)
 
 
-@client.command(pass_context=True)
-# @commands.has_permissions(manage_messages=True)
-async def spam(ctx, *args):
-    """Spams whatever is given in the argument"""
-    output = ''
-    msg_delete = []
-    for word in args:
-        output += word + ' '
-    for _ in range(0, 5):
-        # Adds all spam messages to msg_delete and deletes them all when the user requests
-        delete = await client.say(output)
-        msg_delete.append(delete)
-        await asyncio.sleep(.1)
-    await reaction_response(delete, ctx.message.author, ['❌'], messages_to_delete=(msg_delete))
+# @client.command(pass_context=True)
+# async def spam(ctx, *args):
+#     """Spams whatever is given in the argument"""
+#     output = ''
+#     msg_delete = []
+#     for word in args:
+#         output += word + ' '
+#     for _ in range(0, 5):
+#         # Adds all spam messages to msg_delete and deletes them all when the user requests
+#         delete = await client.say(output)
+#         msg_delete.append(delete)
+#         await asyncio.sleep(.1)
+#     await reaction_response(delete, ctx.message.author, ['❌'], messages_to_delete=(msg_delete))
 
 
 @client.command(pass_context=True)
