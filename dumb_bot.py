@@ -89,7 +89,7 @@ async def on_command_error(error, ctx):
 @client.event
 async def on_ready():
     """Prints bot login and version"""
-    await client.change_presence(game=discord.Game(name='being bad at python'))
+    await client.change_presence(game=discord.Game(type=3, name=f'{len(list(client.servers))} servers | ?help'))
     print(f'We have logged in as {client.user}')
     print(f'Running on discord.py version {discord.__version__}')
 
@@ -97,7 +97,7 @@ async def on_ready():
 @client.event
 async def on_message(message):
     """Prints messages to the console"""
-    print(f'{message.author}: {message.channel}: {message.content}: {message.attachments}: {message.embeds}')
+    print(f'{message.server}: {message.author}: {message.channel}: {message.content}: {message.embeds}')
     await client.process_commands(message)
 
 
@@ -131,9 +131,12 @@ async def defaultrole(ctx,*message):
 @client.event
 async def on_member_join(member): # ADD WARNING IN HELP COMMAND TO PUT BOT ROLE ABOVE DEFAULT ROLE OR IT WILL NOT WORK
     """Assigns premade role to new members"""
-    config = json.load(open(f'{member.server.id}.json'))
-    default_role = config['default_role']
-    role = discord.utils.get(member.server.roles, id=default_role)
+    try:
+        config = json.load(open(f'{member.server.id}.json'))
+        default_role = config['default_role']
+        role = discord.utils.get(member.server.roles, id=default_role)
+    except:
+        print(f'new member joined {member.server.roles}, no default role set.')
     await client.add_roles(member, role)
 
 
@@ -460,15 +463,30 @@ async def jpeg(ctx, quality=2, image_url=None):
     os.remove('jpegged.jpg')
 
 
+@client.command()
+async def servers():
+    """Debug command, prints server info to console"""
+    servers=list(client.servers)
+    for i in servers:
+        print('\n')
+        print(f'id = {i.id}')
+        print(f'name = {i.name}')
+        # print(f'owner = {i.owner}')
+        # print(f'members = {len(list(i.members))}')
+        # for x in i.members:
+        #     print(f'member = {x.name}')
+        print('\n')
+
+
 @client.command(pass_context=True)
 async def help(ctx, *, message='all'):
     """Help window"""
     embed = discord.Embed(
         title='__Dumb Bot Help__',
-        description=f'This bot is really stupid, but it works sometimes.\n{prefix}help [command] to get help with a specific command',
+        description=f'This bot is currently in development. Report errors to Nacho#4642\n{prefix}help [command] to get help with a specific command',
         colour=discord.Colour.orange(),
     )
-    embed.set_footer(text='Dumb Bot by Ali El-Shazly')
+    embed.set_footer(text='Dumb Bot by Nacho#4642')
     embed.set_thumbnail(url='https://bit.ly/2Pg7YXm')
     if 'ping' in message or message == 'all':
         embed.add_field(
@@ -523,6 +541,11 @@ async def help(ctx, *, message='all'):
 
 
 #        TODO:
+# I guess you have to make the bot more professional now
+# Refresh config command
+# Add debug commands only you can access
+# Add an exile channel to the json stuff
+# Separate help by catagories
 # Math command
 # Case sensetivity stuff
 # Un-delete command
