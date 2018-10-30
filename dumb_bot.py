@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord.utils import get
 import random
 import asyncio
+import json
 import time
 from itertools import cycle
 import logging
@@ -47,8 +48,9 @@ async def reaction_response(message, author, emojis, messages_to_delete=None, ti
     return False
 
 
-@client.event  # Error handler
+@client.event
 async def on_command_error(error, ctx):
+    """Error handler"""
     # CheckFailure - User's permissions check failed
     if isinstance(error, commands.CheckFailure):
         embed = discord.Embed(
@@ -100,10 +102,38 @@ async def on_message(message):
 
 
 @client.event
-async def on_member_join(member):
+async def on_server_join(server):
+    """Creates a JSON file with the server ID as the name, adds dict keys"""
+    server_config = {
+        'default_role':'',
+        'prefix':'?'
+    }
+    open(f'{server.id}.json', 'a').close()
+    with open(f'{server.id}.json', 'w') as outfile:
+        json.dump(server_config, outfile)
+
+
+@client.command(pass_context = True)
+async def defaultrole(ctx,*message):
+    """Sets the default role of the server"""
+    message = ' '.join(message) # Converts tuple into string with spaces  
+    role = discord.utils.get(ctx.message.server.roles, name=message)
+    config = json.load(open(f'{ctx.message.server.id}.json'))
+    config['default_role'] = str(role.id) # Adds the role ID to the default role key
+    with open(f'{ctx.message.server.id}.json','w') as outfile:
+        json.dump(config,outfile)
+    embed = discord.Embed(
+        description = f'default role has been set to `{role}`',
+        colour = discord.Colour.orange()
+    )
+    await client.say(embed=embed)
+
+@client.event
+async def on_member_join(member): # ADD WARNING IN HELP COMMAND TO PUT BOT ROLE ABOVE DEFAULT ROLE OR IT WILL NOT WORK
     """Assigns premade role to new members"""
-    default_role = 'actors'
-    role = discord.utils.get(member.server.roles, name=default_role)
+    config = json.load(open(f'{member.server.id}.json'))
+    default_role = config['default_role']
+    role = discord.utils.get(member.server.roles, id=default_role)
     await client.add_roles(member, role)
 
 
@@ -213,7 +243,7 @@ async def _8ball(ctx, message):
     """Asks the magic 8ball a question"""
     message = ctx.message.content[7:]  # Stripping the "!8ball" from the message
     random_num = random.randint(0, 19)
-    responses = open('responses.txt').read().splitlines()
+    responses = json.loads(open('responses.json').read())
     embed = discord.Embed(
         title=':8ball: **8ball**',
         colour=discord.Colour.orange(),
@@ -224,8 +254,9 @@ async def _8ball(ctx, message):
 
 
 @client.command(pass_context=True)
-async def snap(ctx, role: discord.Role = None):
+async def snap(ctx, role = None):
     """Snaps half the people in a sepcific role, defaults to @everyone"""
+    role = discord.utils.get(ctx.message.server.roles, name=role)
     members = []
     # Stripping offline members from being snapped
     for member in ctx.message.server.members:
@@ -466,7 +497,7 @@ async def help(ctx, *, message='all'):
             name=f'{prefix}8ball [message]', value='Returns an answer from the magic 8 ball', inline=False)
     if 'snap' in message or message == 'all':
         embed.add_field(
-            name=f'{prefix}snap [role]', value='Snaps half the people in [role], to make things truly balanced', inline=False)
+            name=f'{prefix}snap [role_name]', value='Snaps half the people in [role_name], to make things truly balanced', inline=False)
     if 'owo' in message or message == 'all':
         embed.add_field(
             name=f'{prefix}owo [message]', value='Owoifies [message] >w< ', inline=False)
@@ -485,17 +516,17 @@ async def help(ctx, *, message='all'):
     if 'jpeg' in message or message == 'all':
         embed.add_field(
             name=f'{prefix}jpeg [quality] [image_url]', value='Applies a JPEG filter to [image_url] with a quality setting of [quality]', inline=False)
+    if 'defaultrole' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}defaultrole [role_name]', value='Sets [role_name] as the default new member role. [role_name] must be lower than the bot role in the higherarchy', inline=False)
     msg = await client.say(embed=embed)
     await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
 
 
-#        TODO:\
+#        TODO:
+# Math command
+# Case sensetivity stuff
 # Un-delete command
-# Nya command
 # Osu stats
-# Make snap work with role names
-# Make snap not snap bots
 # !Google command
-# Make layers in the help command that you can cycle through with reactions
-# Make clear clear messages that were sent a couple secconds ago
 client.run(token)
