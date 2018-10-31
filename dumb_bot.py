@@ -8,6 +8,8 @@ import time
 from itertools import cycle
 import logging
 import os
+import shutil
+import sys
 from PIL import Image, ImageOps, ImageEnhance, ImageFilter
 import requests
 from io import BytesIO
@@ -28,11 +30,12 @@ logger.setLevel(logging.DEBUG)
 handler = logging.FileHandler('errors.log', 'w', 'utf-8')
 logger.addHandler(handler)
 
+ali_id = 197156566288302080
 # token = open('token.txt', 'r').read()
 token = os.environ['TOKEN']
-prefix = '?'
+prefix = '!'
 client = commands.Bot(command_prefix=f'{prefix}')
-client.remove_command('help')
+# client.remove_command('help')
 
 
 async def reaction_response(message, author, emojis, messages_to_delete=None, timeout=None):
@@ -52,7 +55,7 @@ async def reaction_response(message, author, emojis, messages_to_delete=None, ti
 async def on_command_error(error, ctx):
     """Error handler"""
     # CheckFailure - User's permissions check failed
-    if isinstance(error, commands.CheckFailure):
+    if isinstance(error, commands.CheckFailure) or 'forbidden' in str(error).lower():
         embed = discord.Embed(
             title='CheckFailure Error',
             description='You do not have the permissions to use this command.',
@@ -89,7 +92,7 @@ async def on_command_error(error, ctx):
 @client.event
 async def on_ready():
     """Prints bot login and version"""
-    await client.change_presence(game=discord.Game(type=3, name=f'{len(list(client.servers))} servers | ?help'))
+    await client.change_presence(game=discord.Game(type=3, name=f'{len(list(client.servers))} servers | {prefix}help'))
     print(f'We have logged in as {client.user}')
     print(f'Running on discord.py version {discord.__version__}')
 
@@ -105,31 +108,17 @@ async def on_message(message):
 async def on_server_join(server):
     """Creates a JSON file with the server ID as the name, adds dict keys"""
     server_config = {
-        'default_role':'',
-        'prefix':'?'
+        'default_role': '',
+        'exile_channel': ''
     }
-    open(f'{server.id}.json', 'a').close()
-    with open(f'{server.id}.json', 'w') as outfile:
+    open(f'configs/{server.id}.json', 'a').close()
+    with open(f'configs/{server.id}.json', 'w') as outfile:
         json.dump(server_config, outfile)
 
 
-@client.command(pass_context = True)
-async def defaultrole(ctx,*message):
-    """Sets the default role of the server"""
-    message = ' '.join(message) # Converts tuple into string with spaces  
-    role = discord.utils.get(ctx.message.server.roles, name=message)
-    config = json.load(open(f'{ctx.message.server.id}.json'))
-    config['default_role'] = str(role.id) # Adds the role ID to the default role key
-    with open(f'{ctx.message.server.id}.json','w') as outfile:
-        json.dump(config,outfile)
-    embed = discord.Embed(
-        description = f'default role has been set to `{role}`',
-        colour = discord.Colour.orange()
-    )
-    await client.say(embed=embed)
-
 @client.event
-async def on_member_join(member): # ADD WARNING IN HELP COMMAND TO PUT BOT ROLE ABOVE DEFAULT ROLE OR IT WILL NOT WORK
+# ADD WARNING IN HELP COMMAND TO PUT BOT ROLE ABOVE DEFAULT ROLE OR IT WILL NOT WORK
+async def on_member_join(member):
     """Assigns premade role to new members"""
     try:
         config = json.load(open(f'{member.server.id}.json'))
@@ -138,6 +127,77 @@ async def on_member_join(member): # ADD WARNING IN HELP COMMAND TO PUT BOT ROLE 
     except:
         print(f'new member joined {member.server.roles}, no default role set.')
     await client.add_roles(member, role)
+
+
+@client.command(pass_context=True)
+async def defaultrole(ctx, *message):
+    """Sets the default role of the server"""
+    message = ' '.join(message)  # Converts tuple into string with spaces
+    role = discord.utils.get(ctx.message.server.roles, name=message)
+    config = json.load(open(f'configs/{ctx.message.server.id}.json'))
+    # Adds the role ID to the default role key
+    config['default_role'] = str(role.id)
+    with open(f'configs/{ctx.message.server.id}.json', 'w') as outfile:
+        json.dump(config, outfile)
+    embed = discord.Embed(
+        description=f'default role has been set to `{role}`',
+        colour=discord.Colour.orange()
+    )
+    await client.say(embed=embed)
+
+
+@client.command(pass_context = True)
+async def exilechannel(ctx, *message):
+    """Changes the channel that exile moves the exiled user to"""
+    message = ' '.join(message)  # Converts tuple into string with spaces
+    channel = discord.utils.get(ctx.message.server.channels, name=message)
+    config = json.load(open(f'configs/{ctx.message.server.id}.json'))
+    # Adds the channel ID to the exile channel key
+    config['exile_channel'] = str(channel.id)
+    with open(f'configs/{ctx.message.server.id}.json', 'w') as outfile:
+        json.dump(config, outfile)
+    embed = discord.Embed(
+        description=f'exile channel has been set to `{channel}`',
+        colour=discord.Colour.orange()
+    )
+    await client.say(embed=embed)
+
+
+@client.command(pass_context = True, hidden=True)
+async def refreshconfig(ctx):
+    """Adds config files to servers without them"""
+    if ctx.author.id != ali_id:
+        raise PermissionError
+    for server in client.servers:
+        try:
+            # If the server has a config file, no updates are made
+            json.load(open(f'configs/{server.id}.json'))
+            pass 
+        except FileNotFoundError:
+            # If there is no file found, it generates a new config file for the server
+            server_config = {
+                'default_role': '',
+                'exile_channel': ''
+            }
+            open(f'configs/{server.id}.json', 'a').close()
+            with open(f'configs/{server.id}.json', 'w') as outfile:
+                json.dump(server_config, outfile)
+
+@client.command(pass_context = True, hidden=True)
+async def servers(ctx):
+    """Debug command, prints server info to console"""
+    if ctx.author.id != ali_id:
+        raise PermissionError
+    servers = list(client.servers)
+    for i in servers:
+        print('\n')
+        print(f'id = {i.id}')
+        print(f'name = {i.name}')
+        print(f'owner = {i.owner}')
+        # print(f'members = {len(list(i.members))}')
+        # for x in i.members:
+        #     print(f'member = {x.name}')
+        print('\n')
 
 
 @client.command(pass_context=True)
@@ -256,7 +316,7 @@ async def _8ball(ctx, message):
 
 
 @client.command(pass_context=True)
-async def snap(ctx, role = None):
+async def snap(ctx, role=None):
     """Snaps half the people in a sepcific role, defaults to @everyone"""
     role = discord.utils.get(ctx.message.server.roles, name=role)
     members = []
@@ -355,12 +415,10 @@ async def poll(ctx, message):
 
 @client.command(pass_context=True, aliases=['kevin'])
 async def exile(ctx, member: discord.Member, seconds=20):
-    """Exiles a user to a "you're wrong" channel, and gives them a temp role that has no perms. After the time is up they are returned to normal"""
-    destination = client.get_channel('503452748017303553')
+    """Exiles a user to an exile channel"""
+    config = json.load(open(f'configs/{ctx.message.server.id}.json'))
+    destination = config['exile_channel']
     initial_channel = member.voice_channel
-    ali_id = 197156566288302080
-    # producer = discord.utils.get(member.server.roles, name='Producer')
-    # best_friend_role = discord.utils.get(member.server.roles, name='Best Friend role')
     if seconds > 20:
         raise IndexError('Can not kevin someone for more than 20 seconds')
     # Checking to see if ali is the one being kevined, invokes a special message
@@ -463,84 +521,10 @@ async def jpeg(ctx, quality=2, image_url=None):
     os.remove('jpegged.jpg')
 
 
-@client.command()
-async def servers():
-    """Debug command, prints server info to console"""
-    servers=list(client.servers)
-    for i in servers:
-        print('\n')
-        print(f'id = {i.id}')
-        print(f'name = {i.name}')
-        # print(f'owner = {i.owner}')
-        # print(f'members = {len(list(i.members))}')
-        # for x in i.members:
-        #     print(f'member = {x.name}')
-        print('\n')
-
-
-@client.command(pass_context=True)
-async def help(ctx, *, message='all'):
-    """Help window"""
-    embed = discord.Embed(
-        title='__Dumb Bot Help__',
-        description=f'This bot is currently in development. Report errors to Nacho#4642\n{prefix}help [command] to get help with a specific command',
-        colour=discord.Colour.orange(),
-    )
-    embed.set_footer(text='Dumb Bot by Nacho#4642')
-    embed.set_thumbnail(url='https://bit.ly/2Pg7YXm')
-    if 'ping' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}ping', value='Returns the response time of the bot', inline=False)
-    if 'echo' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}echo [message]', value='Returns [message] as an embed', inline=False)
-    if 'clear' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}clear [amount]', value='Clears [amount] messages from the chat', inline=False)
-    if 'spam' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}spam [message]', value='Returns [message] 5 times', inline=False)
-    if 'roll' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}roll [value]', value=f'Returns a random number between 1 and [value]', inline=False)
-    if 'roll' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}roll [list]', value='Returns a random value from [list], separate values with a comma', inline=False)
-    if 'flip' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}flip', value='Returns heads or tails', inline=False)
-    if '8ball' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}8ball [message]', value='Returns an answer from the magic 8 ball', inline=False)
-    if 'snap' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}snap [role_name]', value='Snaps half the people in [role_name], to make things truly balanced', inline=False)
-    if 'owo' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}owo [message]', value='Owoifies [message] >w< ', inline=False)
-    if 'clap' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}clap [message]', value='Clapifies [message]', inline=False)
-    if 'poll' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}poll [message]', value='Creates a poll with [message] as the title. Poll paramaters are collected in the next message sent by the user', inline=False)
-    if 'exile' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}exile [user] [time]', value='Exiles [user] for [time] seconds. Default = 20secs', inline=False)
-    if 'deepfry' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}deepfry [quality] [image_url]', value='Deep fries [image_url]. If [image_url] is not provided, deep fries the last image sent in the channel', inline=False)
-    if 'jpeg' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}jpeg [quality] [image_url]', value='Applies a JPEG filter to [image_url] with a quality setting of [quality]', inline=False)
-    if 'defaultrole' in message or message == 'all':
-        embed.add_field(
-            name=f'{prefix}defaultrole [role_name]', value='Sets [role_name] as the default new member role. [role_name] must be lower than the bot role in the higherarchy', inline=False)
-    msg = await client.say(embed=embed)
-    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
-
+client.run(token)
 
 #        TODO:
+# Somehow add reaction to help command!
 # I guess you have to make the bot more professional now
 # Refresh config command
 # Add debug commands only you can access
@@ -551,4 +535,3 @@ async def help(ctx, *, message='all'):
 # Un-delete command
 # Osu stats
 # !Google command
-client.run(token)
