@@ -31,8 +31,8 @@ handler = logging.FileHandler('errors.log', 'w', 'utf-8')
 logger.addHandler(handler)
 
 ali_id = 197156566288302080
-# token = open('token.txt', 'r').read()
-token = os.environ['TOKEN']
+token = open('token.txt', 'r').read()
+# token = os.environ['TOKEN']
 prefix = '?'
 client = commands.Bot(command_prefix=f'{prefix}')
 # client.remove_command('help')
@@ -166,7 +166,7 @@ async def exilechannel(ctx, *message):
 @client.command(pass_context = True, hidden=True)
 async def refreshconfig(ctx):
     """Adds config files to servers without them"""
-    if ctx.author.id != ali_id:
+    if ctx.message.author.id != str(ali_id):
         raise PermissionError
     for server in client.servers:
         try:
@@ -182,11 +182,13 @@ async def refreshconfig(ctx):
             open(f'configs/{server.id}.json', 'a').close()
             with open(f'configs/{server.id}.json', 'w') as outfile:
                 json.dump(server_config, outfile)
+    print('Config refreshed')
 
 @client.command(pass_context = True, hidden=True)
 async def servers(ctx):
     """Debug command, prints server info to console"""
-    if ctx.author.id != ali_id:
+
+    if ctx.message.author.id != str(ali_id):
         raise PermissionError
     servers = list(client.servers)
     for i in servers:
