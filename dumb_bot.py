@@ -100,7 +100,8 @@ async def on_ready():
 @client.event
 async def on_message(message):
     """Prints messages to the console"""
-    print(f'{message.server}: {message.author}: {message.channel}: {message.content}: {message.embeds}')
+    if 'dumb' in message.author or (message.content).startswith('?'): # Only printing the bot related messages
+        print(f'{message.server}: {message.author}: {message.channel}: {message.content}: {message.embeds}')
     await client.process_commands(message)
 
 
