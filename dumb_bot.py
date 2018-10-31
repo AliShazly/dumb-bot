@@ -31,8 +31,8 @@ handler = logging.FileHandler('errors.log', 'w', 'utf-8')
 logger.addHandler(handler)
 
 ali_id = 197156566288302080
-token = open('token.txt', 'r').read()
-# token = os.environ['TOKEN']
+# token = open('token.txt', 'r').read()
+token = os.environ['TOKEN']
 prefix = '?'
 client = commands.Bot(command_prefix=f'{prefix}')
 # client.remove_command('help')
