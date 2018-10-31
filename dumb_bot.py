@@ -419,7 +419,7 @@ async def poll(ctx, message):
 async def exile(ctx, member: discord.Member, seconds=20):
     """Exiles a user to an exile channel"""
     config = json.load(open(f'configs/{ctx.message.server.id}.json'))
-    destination = config['exile_channel']
+    destination = client.get_channel(config['exile_channel'])
     initial_channel = member.voice_channel
     if seconds > 20:
         raise IndexError('Can not kevin someone for more than 20 seconds')
@@ -436,7 +436,7 @@ async def exile(ctx, member: discord.Member, seconds=20):
         if check == False:
             return
     # If the user is an admin then, the bot doesn't have perms to change thier role.
-    elif ctx.message.author.server_permissions.administrator:
+    elif member.server_permissions.administrator:
         t_end = time.time() + seconds
         while time.time() < t_end:
             await client.move_member(member, destination)
@@ -526,12 +526,8 @@ async def jpeg(ctx, quality=2, image_url=None):
 client.run(token)
 
 #        TODO:
-# Somehow add reaction to help command!
+# Make a help command using discord markdown 
 # I guess you have to make the bot more professional now
-# Refresh config command
-# Add debug commands only you can access
-# Add an exile channel to the json stuff
-# Separate help by catagories
 # Math command
 # Case sensetivity stuff
 # Un-delete command
