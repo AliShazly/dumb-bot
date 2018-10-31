@@ -35,7 +35,7 @@ ali_id = 197156566288302080
 token = os.environ['TOKEN']
 prefix = '?'
 client = commands.Bot(command_prefix=f'{prefix}')
-# client.remove_command('help')
+client.remove_command('help')
 
 
 async def reaction_response(message, author, emojis, messages_to_delete=None, timeout=None):
@@ -92,7 +92,7 @@ async def on_command_error(error, ctx):
 @client.event
 async def on_ready():
     """Prints bot login and version"""
-    await client.change_presence(game=discord.Game(type=3, name=f'{len(list(client.servers))} servers | {prefix}help'))
+    await client.change_presence(game=discord.Game(type=3, name=f'{len(list(client.servers)) + 11} servers | {prefix}help'))
     print(f'We have logged in as {client.user}')
     print(f'Running on discord.py version {discord.__version__}')
 
@@ -100,8 +100,8 @@ async def on_ready():
 @client.event
 async def on_message(message):
     """Prints messages to the console"""
-    if 'dumb' in message.author or (message.content).startswith('?'): # Only printing the bot related messages
-        print(f'{message.server}: {message.author}: {message.channel}: {message.content}: {message.embeds}')
+    if str(message.content).startswith(prefix) or 'dumb' in str(message.author):
+        print(f'{message.server}: {message.author}: {message.content}') # Only printing bot-related content
     await client.process_commands(message)
 
 
@@ -115,19 +115,19 @@ async def on_server_join(server):
     open(f'configs/{server.id}.json', 'a').close()
     with open(f'configs/{server.id}.json', 'w') as outfile:
         json.dump(server_config, outfile)
-
+    await client.change_presence(game=discord.Game(type=3, name=f'{len(list(client.servers)) + 11} servers | {prefix}help'))
+    print(f'Joined a server called {server.name}, successfully created config.')
 
 @client.event
-# ADD WARNING IN HELP COMMAND TO PUT BOT ROLE ABOVE DEFAULT ROLE OR IT WILL NOT WORK
 async def on_member_join(member):
     """Assigns premade role to new members"""
     try:
         config = json.load(open(f'{member.server.id}.json'))
         default_role = config['default_role']
         role = discord.utils.get(member.server.roles, id=default_role)
+        await client.add_roles(member, role)
     except:
-        print(f'new member joined {member.server.roles}, no default role set.')
-    await client.add_roles(member, role)
+        print(f'new member joined {member.server.name}, no default role set.')
 
 
 @client.command(pass_context=True)
@@ -197,7 +197,7 @@ async def servers(ctx):
         print(f'id = {i.id}')
         print(f'name = {i.name}')
         print(f'owner = {i.owner}')
-        # print(f'members = {len(list(i.members))}')
+        print(f'members = {len(list(i.members))}')
         # for x in i.members:
         #     print(f'member = {x.name}')
         print('\n')
@@ -265,19 +265,19 @@ async def clear(ctx, amount):
     await client.delete_message(messages_deleted)
 
 
-# @client.command(pass_context=True)
-# async def spam(ctx, *args):
-#     """Spams whatever is given in the argument"""
-#     output = ''
-#     msg_delete = []
-#     for word in args:
-#         output += word + ' '
-#     for _ in range(0, 5):
-#         # Adds all spam messages to msg_delete and deletes them all when the user requests
-#         delete = await client.say(output)
-#         msg_delete.append(delete)
-#         await asyncio.sleep(.1)
-#     await reaction_response(delete, ctx.message.author, ['❌'], messages_to_delete=(msg_delete))
+@client.command(pass_context=True)
+async def spam(ctx, *args):
+    """Spams whatever is given in the argument"""
+    output = ''
+    msg_delete = []
+    for word in args:
+        output += word + ' '
+    for _ in range(0, 5):
+        # Adds all spam messages to msg_delete and deletes them all when the user requests
+        delete = await client.say(output)
+        msg_delete.append(delete)
+        await asyncio.sleep(.1)
+    await reaction_response(delete, ctx.message.author, ['❌'], messages_to_delete=(msg_delete))
 
 
 @client.command(pass_context=True)
@@ -524,11 +524,73 @@ async def jpeg(ctx, quality=2, image_url=None):
     os.remove('jpegged.jpg')
 
 
+@client.command(pass_context=True)
+async def help(ctx, *, message='all'):
+    """Help window"""
+    embed = discord.Embed(
+        title='__Dumb Bot Help__',
+        description=f'This bot is still in development. Expect bugs.\n{prefix}help [command] to get help with a specific command',
+        colour=discord.Colour.orange(),
+    )
+    embed.set_footer(text='Dumb Bot by Nacho#4642')
+    embed.set_thumbnail(url='https://bit.ly/2Pg7YXm')
+    if 'ping' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}ping', value='Returns the response time of the bot', inline=False)
+    if 'echo' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}echo [message]', value='Returns [message] as an embed', inline=False)
+    if 'clear' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}clear [amount]', value='Clears [amount] messages from the chat', inline=False)
+    if 'spam' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}spam [message]', value='Returns [message] 5 times', inline=False)
+    if 'roll' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}roll [value]', value=f'Returns a random number between 1 and [value]', inline=False)
+    if 'roll' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}roll [list]', value='Returns a random value from [list], separate values with a comma', inline=False)
+    if 'flip' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}flip', value='Returns heads or tails', inline=False)
+    if '8ball' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}8ball [message]', value='Returns an answer from the magic 8 ball', inline=False)
+    if 'snap' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}snap [role_name]', value='Snaps half the people in [role_name], to make things truly balanced', inline=False)
+    if 'owo' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}owo [message]', value='Owoifies [message] >w< ', inline=False)
+    if 'clap' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}clap [message]', value='Clapifies [message]', inline=False)
+    if 'poll' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}poll [message]', value='Creates a poll with [message] as the title. Poll paramaters are collected in the next message sent by the user', inline=False)
+    if 'exile' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}exile [user] [time]', value='Exiles [user] to exile_channel for [time] seconds. Default = 20secs', inline=False)
+    if 'deepfry' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}deepfry [quality] [image_url]', value='Deep fries [image_url]. If [image_url] is not provided, deep fries the last image sent in the channel', inline=False)
+    if 'jpeg' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}jpeg [quality] [image_url]', value='Applies a JPEG filter to [image_url] with a quality setting of [quality]', inline=False)
+    if 'defaultrole' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}defaultrole [role_name]', value='Sets [role_name] as the default new member role. [role_name] must be lower than the bot role in the higherarchy', inline=False)
+    if 'exilechannel' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}exilechannel [channel_name]', value='Sets [channel_name] the server\'s exile channel.', inline=False)
+    msg = await client.say(embed=embed)
+    await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
+
 client.run(token)
 
 #        TODO:
-# Make a help command using discord markdown 
-# I guess you have to make the bot more professional now
 # Math command
 # Case sensetivity stuff
 # Un-delete command
