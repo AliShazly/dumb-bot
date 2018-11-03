@@ -57,21 +57,21 @@ async def on_command_error(error, ctx):
     # CheckFailure - User's permissions check failed
     if isinstance(error, commands.CheckFailure) or 'forbidden' in str(error).lower():
         embed = discord.Embed(
-            title='CheckFailure Error',
+            title='Permission Error',
             description='You do not have the permissions to use this command.',
             colour=discord.Colour.red()
         )
     # CommandInvokeError - When the user does the command syntax wrong eg. "!roll hello"
     elif isinstance(error, commands.CommandInvokeError):
         embed = discord.Embed(
-            title='CommandInvoke Error',
+            title='Command Error',
             description=f'There was a problem executing the command. Check what you typed and try again.',
             colour=discord.Colour.red()
         )
     # MissingRequiredArgument - The user entered a command without an argument eg. "!8ball"
     elif isinstance(error, commands.MissingRequiredArgument):
         embed = discord.Embed(
-            title='MissingRequiredArgument Error',
+            title='Missing Argument',
             description=f'{error} `{ctx.message.content} [argument]`'.capitalize(
             ),
             colour=discord.Colour.red()
@@ -84,8 +84,8 @@ async def on_command_error(error, ctx):
         )
     embed.set_footer(text=f'{prefix}help [command] for more info')
     error_msg = await client.send_message(ctx.message.channel, embed=embed)
-    print(type(error))
-    print(error)
+    print(f'Error_type: {type(error)}')
+    print(f'Error: {error}')
     await reaction_response(error_msg, ctx.message.author, ['❌'], [error_msg])
 
 
@@ -108,26 +108,30 @@ async def on_message(message):
 @client.event
 async def on_server_join(server):
     """Creates a JSON file with the server ID as the name, adds dict keys"""
-    server_config = {
-        'default_role': '',
-        'exile_channel': ''
-    }
-    open(f'configs/{server.id}.json', 'a').close()
-    with open(f'configs/{server.id}.json', 'w') as outfile:
-        json.dump(server_config, outfile)
-    await client.change_presence(game=discord.Game(type=3, name=f'{len(list(client.servers)) + 11} servers | {prefix}help'))
-    print(f'Joined a server called {server.name}, successfully created config.')
+    try:
+        server_config = {
+            'default_role': '',
+            'exile_channel': ''
+        }
+        open(f'configs/{server.id}.json', 'a').close()
+        with open(f'configs/{server.id}.json', 'w') as outfile:
+            json.dump(server_config, outfile)
+        await client.change_presence(game=discord.Game(type=3, name=f'{len(list(client.servers)) + 11} servers | {prefix}help'))  
+        print(f'Joined a server called {server.name}, successfully created config.')
+    except Exception as e:
+        print(f'Error creating config for {server.name}. error: {e}')
+
 
 @client.event
 async def on_member_join(member):
     """Assigns premade role to new members"""
     try:
-        config = json.load(open(f'{member.server.id}.json'))
+        config = json.load(open(f'configs/{member.server.id}.json', 'r'))
         default_role = config['default_role']
         role = discord.utils.get(member.server.roles, id=default_role)
         await client.add_roles(member, role)
-    except:
-        print(f'new member joined {member.server.name}, no default role set.')
+    except Exception as e:
+        print(f'new member joined {member.server.name}, no default role set. error:[{e}]')
 
 
 @client.command(pass_context=True)
@@ -183,17 +187,16 @@ async def refreshconfig(ctx):
             open(f'configs/{server.id}.json', 'a').close()
             with open(f'configs/{server.id}.json', 'w') as outfile:
                 json.dump(server_config, outfile)
+            print(f'Generated new config for {server.name}')
     print('Config refreshed')
 
 @client.command(pass_context = True, hidden=True)
 async def servers(ctx):
     """Debug command, prints server info to console"""
-
     if ctx.message.author.id != str(ali_id):
         raise PermissionError
     servers = list(client.servers)
     for i in servers:
-        print('\n')
         print(f'id = {i.id}')
         print(f'name = {i.name}')
         print(f'owner = {i.owner}')
@@ -215,7 +218,7 @@ async def ping(ctx):
         description=f'The ping time is `{int(ping)}ms`',
         colour=discord.Colour.orange()
     )
-    print(f"Pinged bot with a response time of {ping}ms.")
+    print(f"Pinged bot with a response time of {int(ping)}ms.")
     await client.delete_message(pingms)
     msg = await client.say(embed=embed)
     await reaction_response(msg, ctx.message.author, ['❌'], [msg])
@@ -434,7 +437,7 @@ async def exile(ctx, member: discord.Member, seconds=20):
         msg = await client.say(embed=embed)
         doit = get(client.get_all_emojis(), name='doit')
         check = await reaction_response(msg, ctx.message.author, [doit], timeout=30)
-        if check == False:
+        if check == None:
             return
     # If the user is an admin then, the bot doesn't have perms to change thier role.
     elif member.server_permissions.administrator:
