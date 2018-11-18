@@ -104,3 +104,4 @@ venv.bak/1
 .mypy_cache/
 token.txt
 responses.txt
+.vscode/settings.json

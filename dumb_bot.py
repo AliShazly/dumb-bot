@@ -427,18 +427,21 @@ async def exile(ctx, member: discord.Member, seconds=20):
     initial_channel = member.voice_channel
     if seconds > 20:
         raise IndexError('Can not kevin someone for more than 20 seconds')
+    # Hey you should fix this whenever you get time 
+
     # Checking to see if ali is the one being kevined, invokes a special message
-    elif member.id == str(ali_id):
-        embed = discord.Embed(
-            title='F̨̛A̷̸̷̧̢T҉҉A͞L̸̕͜ ̨̡E̶͢͟R̢͡R̡͘O̴̡͘R̴̨͘',
-            description='͏̷I̴҉̨ ̴̨a̴̢͢͝m̶̕ ̸̨̛͟u̶̢ǹ҉̡ą̨̀͡͝b̵̀́l̡e̷̛͡ ̛̕͏t̷̀̕o̧͢ ̸̛̕c̨̛̕͞o̴͠҉͟m̸̢̀p̷͢l͏̶è̸̸̵̴t̶͢e̴̡͜͠ ̶̧̕͘ý͘͝ớ̵̛u̵̵͢͞͠ŗ̸̛͢͟ ̢̕҉̡r̸̷e̕͞q̶̵̕͝͡ư͟͡ę̵͟s̴̨͟t͠҉.̷̸͟',
-            colour=discord.Colour.red()
-        )
-        msg = await client.say(embed=embed)
-        doit = get(client.get_all_emojis(), name='doit')
-        check = await reaction_response(msg, ctx.message.author, [doit], timeout=30)
-        if check == None:
-            return
+    # elif member.id == str(ali_id):
+    #     embed = discord.Embed(
+    #         title='F̨̛A̷̸̷̧̢T҉҉A͞L̸̕͜ ̨̡E̶͢͟R̢͡R̡͘O̴̡͘R̴̨͘',
+    #         description='͏̷I̴҉̨ ̴̨a̴̢͢͝m̶̕ ̸̨̛͟u̶̢ǹ҉̡ą̨̀͡͝b̵̀́l̡e̷̛͡ ̛̕͏t̷̀̕o̧͢ ̸̛̕c̨̛̕͞o̴͠҉͟m̸̢̀p̷͢l͏̶è̸̸̵̴t̶͢e̴̡͜͠ ̶̧̕͘ý͘͝ớ̵̛u̵̵͢͞͠ŗ̸̛͢͟ ̢̕҉̡r̸̷e̕͞q̶̵̕͝͡ư͟͡ę̵͟s̴̨͟t͠҉.̷̸͟',
+    #         colour=discord.Colour.red()
+    #     )
+    #     msg = await client.say(embed=embed)
+    #     doit = get(client.get_all_emojis(), name='doit')
+    #     check = await reaction_response(msg, ctx.message.author, [doit], timeout=30)
+    #     if check == None:
+    #         return
+
     # If the user is an admin then, the bot doesn't have perms to change thier role.
     elif member.server_permissions.administrator:
         t_end = time.time() + seconds
