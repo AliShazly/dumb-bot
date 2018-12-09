@@ -50,6 +50,16 @@ async def reaction_response(message, author, emojis, messages_to_delete=None, ti
         return True
     return False
 
+async def check_pictures(channel):
+    """Checks for pictures to apply filters if no URL is specified"""
+    async for message in client.logs_from(channel, limit=50):
+        if message.attachments != []:
+            attachments_dict = message.attachments[0]
+            if attachments_dict['filename'][-3:] not in ('png','jpg','peg','bmp','gif'):
+                continue
+            image_url = attachments_dict['url']
+            return image_url
+    return None
 
 @client.event
 async def on_command_error(error, ctx):
@@ -472,12 +482,7 @@ async def deepfry(ctx, quality=None, image_url=None):
     channel = ctx.message.channel
     # If no link is provided, the bot assigns the URL of the last image sent in the channel to the image_link var
     if image_url == None:
-        async for message in client.logs_from(channel, limit=30):
-            if message.attachments != []:
-                attachments_dict = message.attachments[0]
-                image_url = attachments_dict['url']
-                break
-
+        image_url = await check_pictures(channel)
     # Need to use requests to read the image otherwise it returns a 403:FORBIDDEN error
     response = requests.get(image_url)
     img = Image.open(BytesIO(response.content))  # Reading the raw image data
@@ -512,16 +517,12 @@ async def deepfry(ctx, quality=None, image_url=None):
     os.remove('fried.jpg')
 
 
-@client.command(pass_context=True)
-async def jpeg(ctx, quality=2, image_url=None):
+@client.command(pass_context=True, aliases=['jpg'])
+async def jpeg(ctx, quality=2, image_url=None ):
     """Applies a JPEG filter to an image, same ideas as deepfry"""
     channel = ctx.message.channel
     if image_url == None:
-        async for message in client.logs_from(channel, limit=30):
-            if message.attachments != []:
-                attachments_dict = message.attachments[0]
-                image_url = attachments_dict['url']
-                break
+        image_url = await check_pictures(channel)
     response = requests.get(image_url)
     img = Image.open(BytesIO(response.content))
     img = img.convert('RGB')
@@ -529,6 +530,34 @@ async def jpeg(ctx, quality=2, image_url=None):
     await client.send_file(channel, 'jpegged.jpg')
     os.remove('jpegged.jpg')
 
+
+@client.command(pass_context = True)
+async def ascii(ctx, resolution = 100, image_url=None):
+    """Applies an ASCII filter to the image"""
+    channel = ctx.message.channel
+    if resolution > 200:
+        await client.say('Resolution cant be higher than 200!')
+        return
+    if image_url == None:
+        image_url = await check_pictures(channel)
+    response = requests.get(image_url)
+    img = Image.open(BytesIO(response.content))
+    img = img.convert('L')
+    chars = ['.',',',':',';','+','*','?','%','S','#','@']
+    (old_width, old_height) = img.size
+    aspect_ratio = old_height/old_width
+    new_height = int(aspect_ratio * resolution)
+    new_dim = (resolution, new_height)
+    new_image = img.resize(new_dim)
+    greyscale_values = list(new_image.getdata())
+    ascii_pixels = [chars[i//25] for i in greyscale_values]
+    pixels = ''.join(ascii_pixels)
+    ascii_image = [pixels[i:i+resolution] for i in range(0, len(pixels), resolution)]
+    printable = '\n'.join(ascii_image)
+    with open('ascii.txt', 'w') as f:
+        f.write(printable)
+    await client.send_file(channel, 'ascii.txt')
+    os.remove('ascii.txt')
 
 @client.command(pass_context=True)
 async def help(ctx, *, message='all'):
@@ -585,6 +614,9 @@ async def help(ctx, *, message='all'):
     if 'jpeg' in message or message == 'all':
         embed.add_field(
             name=f'{prefix}jpeg [quality] [image_url]', value='Applies a JPEG filter to [image_url] with a quality setting of [quality]', inline=False)
+    if 'ascii' in message or message == 'all':
+        embed.add_field(
+            name=f'{prefix}ascii [resolution] [image_url]', value='Applies an ascii filter to [image_url] with a resolution of [resolution]', inline=False)
     if 'defaultrole' in message or message == 'all':
         embed.add_field(
             name=f'{prefix}defaultrole [role_name]', value='Sets [role_name] as the default new member role. [role_name] must be lower than the bot role in the higherarchy', inline=False)
