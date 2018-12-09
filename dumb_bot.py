@@ -615,7 +615,7 @@ async def help(ctx, *, message='all'):
             name=f'{prefix}jpeg [quality] [image_url]', value='Applies a JPEG filter to [image_url] with a quality setting of [quality]', inline=False)
     if 'ascii' in message or message == 'all':
         embed.add_field(
-            name=f'{prefix}ascii [resolution] [image_url]', value='Applies an ascii filter to [image_url] with a resolution of [resolution] pixels. [resolution] defaults to 300', inline=False)
+            name=f'{prefix}ascii [resolution] [image_url]', value='Applies an ascii filter to [image_url] with a resolution of [resolution] pixels. [resolution] defaults to 200', inline=False)
     if 'defaultrole' in message or message == 'all':
         embed.add_field(
             name=f'{prefix}defaultrole [role_name]', value='Sets [role_name] as the default new member role. [role_name] must be lower than the bot role in the higherarchy', inline=False)
