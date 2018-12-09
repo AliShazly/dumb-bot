@@ -534,7 +534,7 @@ async def jpeg(ctx, quality=2, image_url=None ):
 
 
 @client.command(pass_context = True)
-async def ascii(ctx, resolution = 300, image_url=None):
+async def ascii(ctx, resolution = 200, image_url=None):
     """Applies an ASCII filter to the image"""
     channel = ctx.message.channel
     if image_url == None:
