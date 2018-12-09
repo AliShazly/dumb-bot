@@ -86,6 +86,8 @@ async def on_command_error(error, ctx):
             ),
             colour=discord.Colour.red()
         )
+    elif isinstance(error, commands.CommandNotFound):
+        return
     else:
         embed = discord.Embed(
             title='Error',
@@ -532,18 +534,15 @@ async def jpeg(ctx, quality=2, image_url=None ):
 
 
 @client.command(pass_context = True)
-async def ascii(ctx, resolution = 100, image_url=None):
+async def ascii(ctx, resolution = 300, image_url=None):
     """Applies an ASCII filter to the image"""
     channel = ctx.message.channel
-    if resolution > 200:
-        await client.say('Resolution cant be higher than 200!')
-        return
     if image_url == None:
         image_url = await check_pictures(channel)
     response = requests.get(image_url)
     img = Image.open(BytesIO(response.content))
     img = img.convert('L')
-    chars = ['.',',',':',';','+','*','?','%','S','#','@']
+    chars = ['@', '#', 'S', '%', '?', '*', '+', ';', ':', ',', '.']
     (old_width, old_height) = img.size
     aspect_ratio = old_height/old_width
     new_height = int(aspect_ratio * resolution)
@@ -554,10 +553,10 @@ async def ascii(ctx, resolution = 100, image_url=None):
     pixels = ''.join(ascii_pixels)
     ascii_image = [pixels[i:i+resolution] for i in range(0, len(pixels), resolution)]
     printable = '\n'.join(ascii_image)
-    with open('ascii.txt', 'w') as f:
-        f.write(printable)
-    await client.send_file(channel, 'ascii.txt')
-    os.remove('ascii.txt')
+    with open('ascii.htm', 'w') as f:
+        f.write(f'<pre style="font: 10px/5px monospace;">{printable}</pre>')
+    await client.send_file(channel, 'ascii.htm')
+    os.remove('ascii.htm')
 
 @client.command(pass_context=True)
 async def help(ctx, *, message='all'):
@@ -616,7 +615,7 @@ async def help(ctx, *, message='all'):
             name=f'{prefix}jpeg [quality] [image_url]', value='Applies a JPEG filter to [image_url] with a quality setting of [quality]', inline=False)
     if 'ascii' in message or message == 'all':
         embed.add_field(
-            name=f'{prefix}ascii [resolution] [image_url]', value='Applies an ascii filter to [image_url] with a resolution of [resolution]', inline=False)
+            name=f'{prefix}ascii [resolution] [image_url]', value='Applies an ascii filter to [image_url] with a resolution of [resolution] pixels. [resolution] defaults to 300', inline=False)
     if 'defaultrole' in message or message == 'all':
         embed.add_field(
             name=f'{prefix}defaultrole [role_name]', value='Sets [role_name] as the default new member role. [role_name] must be lower than the bot role in the higherarchy', inline=False)
@@ -629,8 +628,4 @@ async def help(ctx, *, message='all'):
 client.run(token)
 
 #        TODO:
-# Math command
-# Case sensetivity stuff
-# Un-delete command
-# Osu stats
-# !Google command
+# ?Help pages
