@@ -31,8 +31,8 @@ handler = logging.FileHandler('errors.log', 'w', 'utf-8')
 logger.addHandler(handler)
 
 ali_id = 197156566288302080
-# token = open('token.txt', 'r').read()
-token = os.environ['TOKEN']
+token = open('token.txt', 'r').read()
+# token = os.environ['TOKEN']
 prefix = '?'
 client = commands.Bot(command_prefix=f'{prefix}')
 client.remove_command('help')
@@ -50,16 +50,21 @@ async def reaction_response(message, author, emojis, messages_to_delete=None, ti
         return True
     return False
 
+
 async def check_pictures(channel):
     """Checks for pictures to apply filters if no URL is specified"""
     async for message in client.logs_from(channel, limit=50):
         if message.attachments != []:
             attachments_dict = message.attachments[0]
-            if attachments_dict['filename'][-3:] not in ('png','jpg','peg','bmp','gif'):
+            if attachments_dict['filename'][-3:] not in ('png', 'jpg', 'peg', 'bmp', 'gif'):
                 continue
             image_url = attachments_dict['url']
             return image_url
     return None
+
+async def is_gordie(ctx): # Gordie ban
+    if ctx.message.author.id in ('295748840361820160',295748840361820160):
+        raise PermissionError
 
 @client.event
 async def on_command_error(error, ctx):
@@ -69,6 +74,13 @@ async def on_command_error(error, ctx):
         embed = discord.Embed(
             title='Permission Error',
             description='You do not have the permissions to use this command.',
+            colour=discord.Colour.red()
+        )
+    # PermissionError - When the user doesn't have permission to execute the command
+    elif isinstance(error, commands.CommandInvokeError):
+        embed = discord.Embed(
+            title='Permissions Error',
+            description='You don\'t have permission to do that',
             colour=discord.Colour.red()
         )
     # CommandInvokeError - When the user does the command syntax wrong eg. "!roll hello"
@@ -113,7 +125,8 @@ async def on_ready():
 async def on_message(message):
     """Prints messages to the console"""
     if str(message.content).startswith(prefix) or 'dumb' in str(message.author):
-        print(f'{message.server}: {message.author}: {message.content}') # Only printing bot-related content
+        # Only printing bot-related content
+        print(f'{message.server}: {message.author}: {message.content}')
     await client.process_commands(message)
 
 
@@ -128,8 +141,9 @@ async def on_server_join(server):
         open(f'configs/{server.id}.json', 'a').close()
         with open(f'configs/{server.id}.json', 'w') as outfile:
             json.dump(server_config, outfile)
-        await client.change_presence(game=discord.Game(type=3, name=f'{len(list(client.servers)) + 11} servers | {prefix}help'))  
-        print(f'Joined a server called {server.name}, successfully created config.')
+        await client.change_presence(game=discord.Game(type=3, name=f'{len(list(client.servers)) + 11} servers | {prefix}help'))
+        print(
+            f'Joined a server called {server.name}, successfully created config.')
     except Exception as e:
         print(f'Error creating config for {server.name}. error: {e}')
 
@@ -143,7 +157,8 @@ async def on_member_join(member):
         role = discord.utils.get(member.server.roles, id=default_role)
         await client.add_roles(member, role)
     except Exception as e:
-        print(f'new member joined {member.server.name}, no default role set. error:[{e}]')
+        print(
+            f'new member joined {member.server.name}, no default role set. error:[{e}]')
 
 
 @client.command(pass_context=True)
@@ -163,7 +178,7 @@ async def defaultrole(ctx, *message):
     await client.say(embed=embed)
 
 
-@client.command(pass_context = True)
+@client.command(pass_context=True)
 async def exilechannel(ctx, *message):
     """Changes the channel that exile moves the exiled user to"""
     message = ' '.join(message)  # Converts tuple into string with spaces
@@ -180,7 +195,7 @@ async def exilechannel(ctx, *message):
     await client.say(embed=embed)
 
 
-@client.command(pass_context = True, hidden=True)
+@client.command(pass_context=True, hidden=True)
 async def refreshconfig(ctx):
     """Adds config files to servers without them"""
     if ctx.message.author.id != str(ali_id):
@@ -189,7 +204,7 @@ async def refreshconfig(ctx):
         try:
             # If the server has a config file, no updates are made
             json.load(open(f'configs/{server.id}.json'))
-            pass 
+            pass
         except FileNotFoundError:
             # If there is no file found, it generates a new config file for the server
             server_config = {
@@ -202,7 +217,8 @@ async def refreshconfig(ctx):
             print(f'Generated new config for {server.name}')
     print('Config refreshed')
 
-@client.command(pass_context = True, hidden=True)
+
+@client.command(pass_context=True, hidden=True)
 async def servers(ctx):
     """Debug command, prints server info to console"""
     if ctx.message.author.id != str(ali_id):
@@ -221,6 +237,7 @@ async def servers(ctx):
 @client.command(pass_context=True)
 async def ping(ctx):
     """Checks the pingtime of the bot"""
+    await is_gordie(ctx)
     # Not accurate at all, this entire command needs to be reworked
     pingtime = time.time()
     pingms = await client.say("*Pinging...*")
@@ -239,6 +256,7 @@ async def ping(ctx):
 @client.command(pass_context=True)
 async def echo(ctx, *message):
     """Echoes whatever the user attatches to the command"""
+    await is_gordie(ctx)
     output = ''
     for word in message:
         output += f'{word} '
@@ -253,6 +271,7 @@ async def echo(ctx, *message):
 @client.command(pass_context=True)
 async def flip(ctx):
     """Flips a coin"""
+    await is_gordie(ctx)
     coinflip = random.choice(['heads', 'tails'])
     embed = discord.Embed(
         description=f'{ctx.message.author.nick} flipped a coin and got **{coinflip}**!',
@@ -266,6 +285,7 @@ async def flip(ctx):
 @commands.has_permissions(manage_messages=True)
 async def clear(ctx, amount):
     """Deletes a specified amount of messages"""
+    await is_gordie(ctx)
     channel = ctx.message.channel
     messages = []
     async for message in client.logs_from(channel, limit=int(amount) + 1):
@@ -283,6 +303,7 @@ async def clear(ctx, amount):
 @client.command(pass_context=True)
 async def spam(ctx, *args):
     """Spams whatever is given in the argument"""
+    await is_gordie(ctx)
     output = ''
     msg_delete = []
     for word in args:
@@ -298,6 +319,7 @@ async def spam(ctx, *args):
 @client.command(pass_context=True)
 async def roll(ctx, *amount):
     """Picks a random number or a random element from a list"""
+    await is_gordie(ctx)
     amount = ' '.join(amount)  # Converting the amount into a string
     if ',' in amount:
         roll_list = amount.split(',')
@@ -321,6 +343,7 @@ async def roll(ctx, *amount):
 @client.command(name='8ball', pass_context=True)
 async def _8ball(ctx, message):
     """Asks the magic 8ball a question"""
+    await is_gordie(ctx)
     message = ctx.message.content[7:]  # Stripping the "!8ball" from the message
     random_num = random.randint(0, 19)
     responses = json.loads(open('responses.json').read())
@@ -336,6 +359,7 @@ async def _8ball(ctx, message):
 @client.command(pass_context=True)
 async def snap(ctx, role=None):
     """Snaps half the people in a sepcific role, defaults to @everyone"""
+    await is_gordie(ctx)
     role = discord.utils.get(ctx.message.server.roles, name=role)
     members = []
     # Stripping offline members from being snapped
@@ -365,6 +389,7 @@ async def snap(ctx, role=None):
 @client.command(pass_context=True)
 async def owo(ctx, *message):
     """Owoifies text"""
+    await is_gordie(ctx)
     output = ''
     for word in message:
         output += f'{word} '
@@ -389,6 +414,7 @@ async def owo(ctx, *message):
 @client.command(pass_context=True)
 async def clap(ctx, *message):
     """Clapifies a message"""
+    await is_gordie(ctx)
     output = ''
     for word in message:
         output += f'{word} '
@@ -404,6 +430,7 @@ async def clap(ctx, *message):
 @client.command(pass_context=True)
 async def poll(ctx, message):
     """Creates a poll"""
+    await is_gordie(ctx)
     def to_emoji(num):  # Turns a number from 1-26 into an emoji from a-z
         base = 0x1f1e6
         return chr(base + num)
@@ -434,12 +461,13 @@ async def poll(ctx, message):
 @client.command(pass_context=True, aliases=['kevin'])
 async def exile(ctx, member: discord.Member, seconds=20):
     """Exiles a user to an exile channel"""
+    await is_gordie(ctx)
     config = json.load(open(f'configs/{ctx.message.server.id}.json'))
     destination = client.get_channel(config['exile_channel'])
     initial_channel = member.voice_channel
     if seconds > 20:
         raise IndexError('Can not kevin someone for more than 20 seconds')
-    # Hey you should fix this whenever you get time 
+    # TODO: Hey you should fix this whenever you get time
 
     # Checking to see if ali is the one being kevined, invokes a special message
     # elif member.id == str(ali_id):
@@ -481,6 +509,7 @@ async def exile(ctx, member: discord.Member, seconds=20):
 @client.command(pass_context=True)
 async def deepfry(ctx, quality=None, image_url=None):
     """Deep fries an image"""
+    await is_gordie(ctx)
     channel = ctx.message.channel
     # If no link is provided, the bot assigns the URL of the last image sent in the channel to the image_link var
     if image_url == None:
@@ -520,8 +549,9 @@ async def deepfry(ctx, quality=None, image_url=None):
 
 
 @client.command(pass_context=True, aliases=['jpg'])
-async def jpeg(ctx, quality=2, image_url=None ):
+async def jpeg(ctx, quality=2, image_url=None):
     """Applies a JPEG filter to an image, same ideas as deepfry"""
+    await is_gordie(ctx)
     channel = ctx.message.channel
     if image_url == None:
         image_url = await check_pictures(channel)
@@ -533,9 +563,10 @@ async def jpeg(ctx, quality=2, image_url=None ):
     os.remove('jpegged.jpg')
 
 
-@client.command(pass_context = True)
-async def ascii(ctx, resolution = 200, image_url=None):
+@client.command(pass_context=True)
+async def ascii(ctx, resolution=200, image_url=None):
     """Applies an ASCII filter to the image"""
+    await is_gordie(ctx)
     channel = ctx.message.channel
     if image_url == None:
         image_url = await check_pictures(channel)
@@ -551,16 +582,19 @@ async def ascii(ctx, resolution = 200, image_url=None):
     greyscale_values = list(new_image.getdata())
     ascii_pixels = [chars[i//25] for i in greyscale_values]
     pixels = ''.join(ascii_pixels)
-    ascii_image = [pixels[i:i+resolution] for i in range(0, len(pixels), resolution)]
+    ascii_image = [pixels[i:i+resolution]
+                   for i in range(0, len(pixels), resolution)]
     printable = '\n'.join(ascii_image)
     with open('ascii.htm', 'w') as f:
         f.write(f'<pre style="font: 10px/5px monospace;">{printable}</pre>')
     await client.send_file(channel, 'ascii.htm')
     os.remove('ascii.htm')
 
+
 @client.command(pass_context=True)
-async def help(ctx, *, message='all'):
+async def help(ctx, *, message='all'): #TODO: Add pages and make it less verbose
     """Help window"""
+    await is_gordie(ctx)
     embed = discord.Embed(
         title='__Dumb Bot Help__',
         description=f'This bot is still in development. Expect bugs.\n{prefix}help [command] to get help with a specific command',
@@ -626,6 +660,3 @@ async def help(ctx, *, message='all'):
     await reaction_response(msg, ctx.message.author, ['❌'], [msg, ctx.message])
 
 client.run(token)
-
-#        TODO:
-# ?Help pages
