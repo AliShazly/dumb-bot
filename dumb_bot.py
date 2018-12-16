@@ -260,8 +260,11 @@ async def echo(ctx, *message):
 async def flip(ctx):
     """Flips a coin"""
     coinflip = random.choice(['heads', 'tails'])
+    name = ctx.message.author.nick
+    if not name:
+        name = ctx.message.author.name
     embed = discord.Embed(
-        description=f'{ctx.message.author.nick} flipped a coin and got **{coinflip}**!',
+        description=f'{name} flipped a coin and got **{coinflip}**!',
         colour=discord.Color.orange()
     )
     msg = await client.say(embed=embed)
@@ -445,8 +448,7 @@ async def exile(ctx, member: discord.Member, seconds=20):
     initial_channel = member.voice_channel
     if seconds > 20:
         raise IndexError('Can not kevin someone for more than 20 seconds')
-    # Hey you should fix this whenever you get time
-
+    # TODO: Fix this whenever you get time
     # Checking to see if ali is the one being kevined, invokes a special message
     # elif member.id == str(ali_id):
     #     embed = discord.Embed(
@@ -488,13 +490,12 @@ async def exile(ctx, member: discord.Member, seconds=20):
 async def deepfry(ctx, quality=None, image_url=None):
     """Deep fries an image"""
     channel = ctx.message.channel
-    # If no link is provided, the bot assigns the URL of the last image sent in the channel to the image_link var
     if image_url == None:
         image_url = await check_pictures(channel)
     # Need to use requests to read the image otherwise it returns a 403:FORBIDDEN error
     response = requests.get(image_url)
     img = Image.open(BytesIO(response.content))  # Reading the raw image data
-    img = img.convert('RGB')  # Converting RGBA into RGB
+    img = img.convert('RGB')
 
     # Resizes and resamples the image multiple times, then crushes the histogram
     if quality == 'crush':
