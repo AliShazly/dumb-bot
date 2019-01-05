@@ -106,7 +106,7 @@ async def on_command_error(error, ctx):
 @client.event
 async def on_ready():
     """Prints bot login and version"""
-    await client.change_presence(game=discord.Game(type=3, name=f'{len(list(client.servers)) + 11} servers | {prefix}help'))
+    await client.change_presence(game=discord.Game(type=3, name=f'you | {prefix}help'))
     print(f'We have logged in as {client.user}')
     print(f'Running on discord.py version {discord.__version__}')
 
@@ -131,7 +131,6 @@ async def on_server_join(server):
         open(f'configs/{server.id}.json', 'a').close()
         with open(f'configs/{server.id}.json', 'w') as outfile:
             json.dump(server_config, outfile)
-        await client.change_presence(game=discord.Game(type=3, name=f'{len(list(client.servers)) + 11} servers | {prefix}help'))
         print(
             f'Joined a server called {server.name}, successfully created config.')
     except Exception as e:
